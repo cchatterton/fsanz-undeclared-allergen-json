@@ -1,0 +1,54 @@
+.fsanz-alerts-admin .fsanz-alerts-hero {
+    align-items: flex-start;
+    background: #002840;
+    border-radius: 0.75rem;
+    color: #fff;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: space-between;
+    margin: 1rem 0;
+    padding: 1.5rem;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-hero h2 {
+    color: #fff;
+    font-size: 1.5rem;
+    margin: 0 0 0.5rem;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-hero p {
+    margin: 0;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-eyebrow {
+    color: #ff6b00;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem !important;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-version {
+    color: #d7e3ed;
+    flex: 0 0 auto;
+    font-size: 0.875rem;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-panel {
+    background: #fff;
+    border: 0.0625rem solid #d5dfe5;
+    border-radius: 0.75rem;
+    box-shadow: 0 0.2rem 0.8rem rgba(0, 40, 64, 0.07);
+    max-width: 56rem;
+    padding: 1.5rem;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-panel h2 {
+    margin-top: 0;
+}
+
+@media (max-width: 40rem) {
+    .fsanz-alerts-admin .fsanz-alerts-hero {
+        flex-direction: column;
+    }
+}
