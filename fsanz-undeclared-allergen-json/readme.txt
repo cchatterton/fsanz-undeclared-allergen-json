@@ -1,9 +1,9 @@
 === AlphaSys FSANZ Alerts ===
-Contributors:
+Contributors: alphasys
 Tags: food-recall, allergens, json, fsanz
 Requires at least: 7.0
 Tested up to:
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -31,6 +31,9 @@ WP-Cron requires site traffic. Use a host scheduled task to trigger wp-cron.php 
 This plugin requests public recall listing and detail pages from https://www.foodstandards.gov.au at activation, on daily WP-Cron refreshes, and when an administrator clicks Refresh now. Each request exposes the site's server IP address to FSANZ as a normal web request. No visitor, account, or site content is sent in the request. FSANZ privacy policy: https://www.foodstandards.gov.au/legal-policies/privacy . FSANZ copyright and reuse conditions: https://www.foodstandards.gov.au/legal-policies/copyright .
 
 == Changelog ==
+
+= 1.1.3 =
+* Added the verified AlphaSys WordPress.org contributor username to the readme metadata.
 
 = 1.1.2 =
 * Declared AlphaSys Controller API 1 so the controller recognises the integration.

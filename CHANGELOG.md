@@ -2,6 +2,10 @@
 
 All notable changes to AlphaSys FSANZ Alerts are recorded here.
 
+## 1.1.3 - 2026-11-12
+
+- Added the verified AlphaSys WordPress.org contributor username to the readme metadata.
+
 ## 1.1.2 - 2026-11-12
 
 - Declared AlphaSys Controller API 1 in the plugin header for controller discovery and compatibility checks.
