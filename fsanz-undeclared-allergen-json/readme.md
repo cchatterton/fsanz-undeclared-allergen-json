@@ -1,8 +1,8 @@
 # AlphaSys FSANZ Alerts
 
 Author: AlphaSys  
-Version: 1.1.1  
-Status: Production  
+Version: 1.1.2  
+Status: Beta  
 Branding Mode: Author Branded
 
 Publishes public JSON of FSANZ recall cards labelled "Undeclared allergen". Each item includes structured recall information from its detail page; `problem` is also available directly on the item. The plugin retains the last successful feed if a refresh fails.

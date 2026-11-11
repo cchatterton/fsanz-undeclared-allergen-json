@@ -2,10 +2,11 @@
 /**
  * Plugin Name: AlphaSys FSANZ Alerts
  * Description: Publishes a daily JSON feed of Australian undeclared allergen recalls.
- * Version: 1.1.1
+ * Version: 1.1.2
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Update URI: https://github.com/cchatterton/fsanz-undeclared-allergen-json
+ * AlphaSys Controller API: 1
  * Author: AlphaSys
  * Author URI: https://alphasys.com.au
  * License: GPL v2 or later
@@ -15,7 +16,7 @@
 
 if (!defined('ABSPATH')) { exit; }
 
-define('FSANZ_ALLERGEN_VERSION', '1.1.1');
+define('FSANZ_ALLERGEN_VERSION', '1.1.2');
 define('FSANZ_ALLERGEN_PLUGIN_FILE', __FILE__);
 define('FSANZ_ALLERGEN_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
