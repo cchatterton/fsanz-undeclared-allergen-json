@@ -66,7 +66,9 @@ final class FSANZ_Alerts_Importer {
     }
 
     public static function hourly_import() {
-        self::run(0, true, 'hourly');
+        if (FSANZ_Undeclared_Allergen_JSON::automation_enabled()) {
+            self::run(0, true, 'hourly');
+        }
     }
 
     public static function manual_import_next() {

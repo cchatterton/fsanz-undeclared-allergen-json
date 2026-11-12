@@ -235,7 +235,7 @@ final class FSANZ_Alerts_Designer {
         echo '</form></div>';
         echo '<form id="fsanz-alerts-automation" method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="fsanz_alerts_toggle_automation">';
         wp_nonce_field('fsanz_alerts_toggle_automation');
-        echo '<label><input type="checkbox" name="enabled" value="1" ' . checked(FSANZ_Undeclared_Allergen_JSON::automation_enabled(), true, false) . '> Automatic hourly refresh and draft import</label>';
+        echo '<label><input type="checkbox" name="enabled" value="1" ' . checked(FSANZ_Undeclared_Allergen_JSON::automation_enabled(), true, false) . '> Enable hourly refresh and import all missing as drafts</label>';
         echo '<noscript><button type="submit" class="button">Save automation</button></noscript></form></div>';
     }
 

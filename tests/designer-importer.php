@@ -16,7 +16,7 @@ class WP_Error {
 class FSANZ_Undeclared_Allergen_JSON {
     public static $refreshes = 0;
     public const AUTOMATION_OPTION = 'fsanz_alerts_hourly_enabled';
-    public static function automation_enabled() { return get_option(self::AUTOMATION_OPTION, '1') !== '0'; }
+    public static function automation_enabled() { return get_option(self::AUTOMATION_OPTION, '0') === '1'; }
     public static function refresh() {
         self::$refreshes++;
         $feed = get_option('fsanz_undeclared_allergen_feed');
@@ -82,6 +82,9 @@ $two = array(
 );
 $feed = array('source' => 'https://www.foodstandards.gov.au/food-recalls/recall-alert', 'count' => 2, 'generated_at' => gmdate('c'), 'items' => array($one, $two));
 update_option('fsanz_undeclared_allergen_feed', $feed);
+same(FSANZ_Undeclared_Allergen_JSON::automation_enabled(), false, 'Automation defaults off');
+FSANZ_Alerts_Importer::ensure_schedule();
+same(wp_next_scheduled(FSANZ_Alerts_Importer::CRON), false, 'No import schedule by default');
 
 $catalog = FSANZ_Alerts_Designer::token_catalog($feed);
 same($catalog['item_problem'], 'Undeclared egg & soy', 'Problem token');
@@ -151,9 +154,12 @@ same($selected['imported'], 1, 'Selected recall imported');
 same($GLOBALS['meta'][4][FSANZ_Alerts_Importer::SOURCE_META], $five['url'], 'Selected URL imported exactly');
 same(FSANZ_Alerts_Importer::existing_post_id($four['url']), 0, 'Earlier missing recall left untouched');
 same($GLOBALS['posts'][4]['post_status'], 'draft', 'Selected recall is draft');
+update_option(FSANZ_Undeclared_Allergen_JSON::AUTOMATION_OPTION, '1');
 FSANZ_Alerts_Importer::ensure_schedule();
 same(wp_get_schedule(FSANZ_Alerts_Importer::CRON), 'hourly', 'Hourly import schedule');
 update_option(FSANZ_Undeclared_Allergen_JSON::AUTOMATION_OPTION, '0');
 FSANZ_Alerts_Importer::ensure_schedule();
 same(wp_next_scheduled(FSANZ_Alerts_Importer::CRON), false, 'Automation toggle clears schedule');
+FSANZ_Alerts_Importer::hourly_import();
+same(FSANZ_Alerts_Importer::existing_post_id($four['url']), 0, 'Paused cron callback imports nothing');
 echo "Designer and importer tests passed\n";

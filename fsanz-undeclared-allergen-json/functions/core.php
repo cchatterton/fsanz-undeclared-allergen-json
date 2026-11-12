@@ -10,7 +10,7 @@ final class FSANZ_Undeclared_Allergen_JSON {
     public const AUTOMATION_OPTION = 'fsanz_alerts_hourly_enabled';
 
     public static function init() {
-        add_action(self::CRON, array(__CLASS__, 'refresh'));
+        add_action(self::CRON, array(__CLASS__, 'scheduled_refresh'));
         add_action('rest_api_init', array(__CLASS__, 'register_route'));
         add_action('admin_menu', array(__CLASS__, 'admin_menu'));
         add_action('admin_enqueue_scripts', array(__CLASS__, 'admin_assets'));
@@ -39,7 +39,13 @@ final class FSANZ_Undeclared_Allergen_JSON {
     }
 
     public static function automation_enabled() {
-        return get_option(self::AUTOMATION_OPTION, '1') !== '0';
+        return get_option(self::AUTOMATION_OPTION, '0') === '1';
+    }
+
+    public static function scheduled_refresh() {
+        if (self::automation_enabled()) {
+            self::refresh();
+        }
     }
 
     public static function toggle_automation() {

@@ -2,6 +2,12 @@
 
 All notable changes to AlphaSys FSANZ Alerts are recorded here.
 
+## 1.4.1 - 2026-11-12
+
+- Default hourly automation to off, including upgrades where no on/off choice was saved.
+- Clear feed and import schedules when off, and guard callbacks against queued runs.
+- Clarify that enabling automation imports all missing recalls as drafts.
+
 ## 1.4.0 - 2026-11-12
 
 - Restored the compact Author Branded navy hero, version watermark, and capability chips.
