@@ -18,9 +18,17 @@
     var importNext = document.getElementById('fsanz-alerts-import-next');
     var tabs = Array.prototype.slice.call(document.querySelectorAll('.fsanz-alerts-tab'));
     var automation = document.getElementById('fsanz-alerts-automation');
+    var postStatusForm = document.getElementById('fsanz-alerts-post-status');
     if (automation) {
         automation.querySelector('input[type="checkbox"]').addEventListener('change', function () {
             automation.submit();
+        });
+    }
+    if (postStatusForm) {
+        postStatusForm.querySelectorAll('input[name="post_status"]').forEach(function (input) {
+            input.addEventListener('change', function () {
+                postStatusForm.submit();
+            });
         });
     }
     if (!template || !record || !frame || !status || !recordNav) {
@@ -68,6 +76,7 @@
             }
             frame.srcdoc = result.data.document;
             addNow.hidden = !result.data.missing;
+            addNow.textContent = result.data.post_status === 'publish' ? 'Publish now' : 'Add now';
             var canImport = result.data.template_saved && !hasUnsavedChanges() && !result.data.unknown.length;
             addNow.disabled = !canImport;
             addNow.title = canImport ? '' : 'Save a valid HTML merge template first';

@@ -115,6 +115,25 @@
     margin-top: 0.5rem;
 }
 
+.fsanz-alerts-admin #fsanz-alerts-post-status {
+    margin-top: 0.75rem;
+}
+
+.fsanz-alerts-admin #fsanz-alerts-post-status fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.fsanz-alerts-admin #fsanz-alerts-post-status legend {
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
+.fsanz-alerts-admin #fsanz-alerts-post-status label + label {
+    margin-left: 1rem;
+}
+
 .fsanz-alerts-admin .fsanz-alerts-tabs {
     border-bottom: 0.0625rem solid var(--fsanz-border);
     display: flex;

@@ -83,6 +83,7 @@ $two = array(
 $feed = array('source' => 'https://www.foodstandards.gov.au/food-recalls/recall-alert', 'count' => 2, 'generated_at' => gmdate('c'), 'items' => array($one, $two));
 update_option('fsanz_undeclared_allergen_feed', $feed);
 same(FSANZ_Undeclared_Allergen_JSON::automation_enabled(), false, 'Automation defaults off');
+same(FSANZ_Alerts_Importer::post_status(), 'draft', 'New Alerts default to draft');
 FSANZ_Alerts_Importer::ensure_schedule();
 same(wp_next_scheduled(FSANZ_Alerts_Importer::CRON), false, 'No import schedule by default');
 
@@ -162,4 +163,9 @@ FSANZ_Alerts_Importer::ensure_schedule();
 same(wp_next_scheduled(FSANZ_Alerts_Importer::CRON), false, 'Automation toggle clears schedule');
 FSANZ_Alerts_Importer::hourly_import();
 same(FSANZ_Alerts_Importer::existing_post_id($four['url']), 0, 'Paused cron callback imports nothing');
+update_option(FSANZ_Alerts_Importer::POST_STATUS_OPTION, 'publish');
+$published = FSANZ_Alerts_Importer::run(1, false, 'manual selected', $four['url']);
+same($published['post_status'], 'publish', 'Selected status is reported');
+same($GLOBALS['posts'][5]['post_status'], 'publish', 'Explicit published choice applies to new import');
+same($GLOBALS['posts'][1]['post_status'], 'draft', 'Existing Alert status is unchanged');
 echo "Designer and importer tests passed\n";

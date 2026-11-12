@@ -1,15 +1,15 @@
 # AlphaSys FSANZ Alerts
 
 - Author: AlphaSys
-- Version: 1.4.1
+- Version: 1.5.0
 - Status: Beta
 - Branding Mode: Author Branded
 
 Publishes public JSON of FSANZ recall cards labelled "Undeclared allergen". Each item includes structured recall information from its detail page; `problem` is also available directly on the item. The plugin retains the last successful feed if a refresh fails.
 
-Install the release ZIP through WordPress and visit **Settings → FSANZ Alerts** to refresh, edit the HTML merge template, and preview any recall. The Template tab places available tokens beside the HTML editor; the full-width Preview tab browses every cached recall with Previous and Next controls and offers Add now for the selected missing recall. Click a token to insert it into the template. Tokens follow the `%item_problem%` pattern; nested JSON fields use underscore-separated paths, and the complete feed is available under `%feed_*%`. The REST namespace remains `fsanz-allergens/v1` for existing consumers.
+Install the release ZIP through WordPress and visit **Settings → FSANZ Alerts** to refresh, edit the HTML merge template, and preview any recall. The Template tab places available tokens beside the HTML editor; the full-width Preview tab browses every cached recall with Previous and Next controls and offers Add now or Publish now for the selected missing recall. Click a token to insert it into the template. Tokens follow the `%item_problem%` pattern; nested JSON fields use underscore-separated paths, and the complete feed is available under `%feed_*%`. The REST namespace remains `fsanz-allergens/v1` for existing consumers.
 
-Save the template before importing. **Import next missing record** creates one draft `alert` post. Select a featured-image token in the template editor; it is downloaded into the Media Library when a draft is created. Hourly automation is off until an administrator enables it. When enabled, it refreshes the JSON and imports all missing recalls as drafts; the switch pauses or resumes both jobs. Existing Alerts, including those in Trash, are identified by their FSANZ detail URL and are not overwritten.
+Save the template before importing. **Import next missing record** creates one `alert` post using the selected Draft or Published status. Select a featured-image token in the template editor; it is downloaded into the Media Library when an Alert is created. Hourly automation is off until an administrator enables it. When enabled, it refreshes the JSON and imports all missing recalls using the selected status; the switch pauses or resumes both jobs. Draft is the default, and changing the status does not alter existing Alerts. Existing Alerts, including those in Trash, are identified by their FSANZ detail URL and are not overwritten.
 
 Normal feature operation does not require AS Update Controller. The guarded client exposes installation, activation, and update actions on the Plugins screen when needed. Updates are published through [AS Update Controller](https://github.com/cchatterton/as-update-controller).
 

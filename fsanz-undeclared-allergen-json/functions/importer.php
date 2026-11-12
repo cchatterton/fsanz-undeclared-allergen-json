@@ -5,6 +5,7 @@ final class FSANZ_Alerts_Importer {
     const POST_TYPE = 'alert';
     const TEMPLATE_OPTION = 'fsanz_alerts_html_template';
     const IMAGE_TOKEN_OPTION = 'fsanz_alerts_featured_image_token';
+    const POST_STATUS_OPTION = 'fsanz_alerts_new_post_status';
     const STATUS_OPTION = 'fsanz_alerts_import_status';
     const CRON = 'fsanz_alerts_nightly_import';
     const SOURCE_META = '_fsanz_alert_source_url';
@@ -16,6 +17,7 @@ final class FSANZ_Alerts_Importer {
         add_action('init', array(__CLASS__, 'ensure_schedule'));
         add_action(self::CRON, array(__CLASS__, 'hourly_import'));
         add_action('admin_post_fsanz_alerts_import_next', array(__CLASS__, 'manual_import_next'));
+        add_action('admin_post_fsanz_alerts_save_post_status', array(__CLASS__, 'save_post_status'));
     }
 
     public static function activate() {
@@ -86,6 +88,24 @@ final class FSANZ_Alerts_Importer {
         return is_string($template) ? $template : '';
     }
 
+    public static function post_status() {
+        return get_option(self::POST_STATUS_OPTION, 'draft') === 'publish' ? 'publish' : 'draft';
+    }
+
+    public static function save_post_status() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Not allowed.');
+        }
+        check_admin_referer('fsanz_alerts_save_post_status');
+        $status = isset($_POST['post_status']) ? wp_unslash($_POST['post_status']) : '';
+        if (!in_array($status, array('draft', 'publish'), true)) {
+            wp_die('Invalid Alert status.');
+        }
+        update_option(self::POST_STATUS_OPTION, $status, false);
+        wp_safe_redirect(admin_url('options-general.php?page=fsanz-allergen-json'));
+        exit;
+    }
+
     public static function existing_post_id($url) {
         $ids = get_posts(array(
             'post_type' => self::POST_TYPE,
@@ -125,6 +145,7 @@ final class FSANZ_Alerts_Importer {
             'title' => '',
             'error' => '',
             'warnings' => array(),
+            'post_status' => self::post_status(),
         );
         $lock_time = (int) get_option(self::LOCK_OPTION, 0);
         if ($lock_time && $lock_time < time() - 3600) {
@@ -177,7 +198,7 @@ final class FSANZ_Alerts_Importer {
                 }
                 $post_id = wp_insert_post(array(
                     'post_type' => self::POST_TYPE,
-                    'post_status' => 'draft',
+                    'post_status' => $status['post_status'],
                     'post_title' => $item['title'],
                     'post_content' => "<!-- wp:html -->\n" . $rendered['html'] . "\n<!-- /wp:html -->",
                 ), true);

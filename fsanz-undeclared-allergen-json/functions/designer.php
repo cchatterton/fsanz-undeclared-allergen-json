@@ -176,6 +176,7 @@ final class FSANZ_Alerts_Designer {
         $rendered['document'] = self::preview_document($rendered['html']);
         $rendered['missing'] = !FSANZ_Alerts_Importer::existing_post_id($feed['items'][$index]['url']);
         $rendered['template_saved'] = FSANZ_Alerts_Importer::saved_template() !== '';
+        $rendered['post_status'] = FSANZ_Alerts_Importer::post_status();
         wp_send_json_success($rendered);
     }
 
@@ -198,7 +199,7 @@ final class FSANZ_Alerts_Designer {
             wp_send_json_error(array('message' => $result['error'] !== '' ? $result['error'] : 'The selected recall could not be imported.'), 500);
         }
         wp_send_json_success(array(
-            'message' => $result['warnings'] ? 'Draft created. Featured image: ' . implode(' ', $result['warnings']) : 'Draft created.',
+            'message' => ($result['post_status'] === 'publish' ? 'Alert published.' : 'Draft created.') . ($result['warnings'] ? ' Featured image: ' . implode(' ', $result['warnings']) : ''),
             'edit_url' => get_edit_post_link($result['post_id'], 'raw'),
         ));
     }
@@ -231,12 +232,16 @@ final class FSANZ_Alerts_Designer {
         if ($saved === '' || $missing === 0) {
             $button_attributes['disabled'] = 'disabled';
         }
-        submit_button('Import next missing record', 'primary', 'submit', false, $button_attributes);
+        submit_button(FSANZ_Alerts_Importer::post_status() === 'publish' ? 'Publish next missing record' : 'Import next missing record', 'primary', 'submit', false, $button_attributes);
         echo '</form></div>';
         echo '<form id="fsanz-alerts-automation" method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="fsanz_alerts_toggle_automation">';
         wp_nonce_field('fsanz_alerts_toggle_automation');
-        echo '<label><input type="checkbox" name="enabled" value="1" ' . checked(FSANZ_Undeclared_Allergen_JSON::automation_enabled(), true, false) . '> Enable hourly refresh and import all missing as drafts</label>';
-        echo '<noscript><button type="submit" class="button">Save automation</button></noscript></form></div>';
+        echo '<label><input type="checkbox" name="enabled" value="1" ' . checked(FSANZ_Undeclared_Allergen_JSON::automation_enabled(), true, false) . '> Enable hourly refresh and import all missing Alerts</label>';
+        echo '<noscript><button type="submit" class="button">Save automation</button></noscript></form>';
+        echo '<form id="fsanz-alerts-post-status" method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="fsanz_alerts_save_post_status">';
+        wp_nonce_field('fsanz_alerts_save_post_status');
+        echo '<fieldset><legend>Create imported Alerts as</legend><label><input type="radio" name="post_status" value="draft" ' . checked(FSANZ_Alerts_Importer::post_status(), 'draft', false) . '> Draft</label><label><input type="radio" name="post_status" value="publish" ' . checked(FSANZ_Alerts_Importer::post_status(), 'publish', false) . '> Published</label></fieldset>';
+        echo '<noscript><button type="submit" class="button">Save import status</button></noscript></form></div>';
     }
 
     public static function render_admin($feed) {
@@ -284,8 +289,8 @@ final class FSANZ_Alerts_Designer {
         echo '<p>Showing this: <strong id="fsanz-alerts-record-title">' . esc_html($titles[0]) . '</strong> <span id="fsanz-alerts-record-position">1 of ' . esc_html((string) count($titles)) . '</span></p>';
         $first_missing = !FSANZ_Alerts_Importer::existing_post_id($feed['items'][0]['url']);
         echo '<div class="fsanz-alerts-record-actions"><button type="button" class="button-link" id="fsanz-alerts-previous" disabled>← Previous</button><button type="button" class="button-link" id="fsanz-alerts-next"' . (count($titles) < 2 ? ' disabled' : '') . '>Next →</button>';
-        echo '<button type="button" class="button-link fsanz-alerts-add-now" id="fsanz-alerts-add-now"' . ($first_missing ? '' : ' hidden') . ($saved === '' ? ' disabled title="Save the HTML merge template first"' : '') . '>Add now</button>';
-        echo '<a id="fsanz-alerts-edit-draft" href="#" hidden>Edit draft</a></div></div>';
+        echo '<button type="button" class="button-link fsanz-alerts-add-now" id="fsanz-alerts-add-now"' . ($first_missing ? '' : ' hidden') . ($saved === '' ? ' disabled title="Save the HTML merge template first"' : '') . '>' . (FSANZ_Alerts_Importer::post_status() === 'publish' ? 'Publish now' : 'Add now') . '</button>';
+        echo '<a id="fsanz-alerts-edit-draft" href="#" hidden>Edit Alert</a></div></div>';
         echo '<input type="hidden" id="fsanz-alerts-record" value="0">';
         echo '<p id="fsanz-alerts-preview-status" role="status" aria-live="polite">Previewing the selected recall.</p>';
         $initial = self::render_template($template, $feed, $feed['items'][0]);

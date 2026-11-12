@@ -2,6 +2,12 @@
 
 All notable changes to AlphaSys FSANZ Alerts are recorded here.
 
+## 1.5.0 - 2026-11-12
+
+- Added a Draft or Published choice for new manual and hourly Alert imports, with Draft as the default.
+- Updated manual action labels and selected-record feedback for published imports.
+- Existing Alert post statuses remain unchanged.
+
 ## 1.4.1 - 2026-11-12
 
 - Default hourly automation to off, including upgrades where no on/off choice was saved.

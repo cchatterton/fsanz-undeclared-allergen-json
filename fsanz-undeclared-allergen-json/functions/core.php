@@ -413,7 +413,7 @@ final class FSANZ_Undeclared_Allergen_JSON {
         }
         echo '<header class="fsanz-alerts-hero"><div class="fsanz-alerts-hero-copy"><p class="fsanz-alerts-eyebrow">FOOD RECALL MONITORING</p><h2>FSANZ Alerts</h2><p>Undeclared allergen recalls, ready for review.</p></div>';
         echo '<span class="fsanz-alerts-version" aria-label="Version ' . esc_attr(FSANZ_ALLERGEN_VERSION) . '">v' . esc_html(FSANZ_ALLERGEN_VERSION) . '</span>';
-        echo '<div class="fsanz-alerts-capabilities" aria-label="Capabilities"><span>' . (self::automation_enabled() ? 'Hourly refresh' : 'Automation paused') . '</span><span>Draft imports</span><span>Public JSON</span></div></header>';
+        echo '<div class="fsanz-alerts-capabilities" aria-label="Capabilities"><span>' . (self::automation_enabled() ? 'Hourly refresh' : 'Automation paused') . '</span><span>' . (FSANZ_Alerts_Importer::post_status() === 'publish' ? 'Published imports' : 'Draft imports') . '</span><span>Public JSON</span></div></header>';
         FSANZ_Alerts_Designer::render_status($feed);
         FSANZ_Alerts_Designer::render_admin($feed);
         echo '</div>';
