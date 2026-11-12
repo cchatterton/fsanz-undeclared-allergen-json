@@ -61,6 +61,10 @@
             var start = template.selectionStart;
             var end = template.selectionEnd;
             template.value = template.value.slice(0, start) + token + template.value.slice(end);
+            var templateSection = document.getElementById('fsanz-alerts-template-section');
+            if (templateSection) {
+                templateSection.open = true;
+            }
             template.focus();
             template.setSelectionRange(start + token.length, start + token.length);
             queuePreview();

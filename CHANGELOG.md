@@ -2,6 +2,11 @@
 
 All notable changes to AlphaSys FSANZ Alerts are recorded here.
 
+## 1.2.1 - 2026-11-12
+
+- Stacked Available tokens, HTML merge template, and Live preview as independent full-width accordions.
+- Opening a token while the template accordion is closed now opens the editor before inserting it.
+
 ## 1.2.0 - 2026-11-12
 
 - Added token discovery for the complete cached JSON, an HTML merge template editor, and a live per-record preview.

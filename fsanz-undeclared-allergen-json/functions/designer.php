@@ -171,32 +171,36 @@ final class FSANZ_Alerts_Designer {
             echo '<p>Refresh the FSANZ feed to load records and tokens for preview.</p></div>';
             return;
         }
-        echo '<div class="fsanz-alerts-designer-grid"><div>';
-        echo '<label for="fsanz-alerts-record"><strong>Preview record</strong></label>';
-        echo '<select id="fsanz-alerts-record" class="widefat">';
-        foreach ($feed['items'] as $index => $item) {
-            echo '<option value="' . esc_attr((string) $index) . '">' . esc_html($item['title']) . '</option>';
-        }
-        echo '</select>';
-        echo '<label for="fsanz-alerts-token-search"><strong>Available tokens</strong></label>';
+        echo '<div class="fsanz-alerts-accordion-stack">';
+        echo '<details class="fsanz-alerts-accordion" id="fsanz-alerts-tokens-section" open><summary>Available tokens</summary><div class="fsanz-alerts-accordion-content">';
+        echo '<p>Use a token to insert a value from the selected recall or the full JSON feed into the HTML merge template.</p>';
+        echo '<label for="fsanz-alerts-token-search" class="screen-reader-text">Search available tokens</label>';
         echo '<input id="fsanz-alerts-token-search" class="widefat" type="search" placeholder="Search tokens">';
         echo '<div class="fsanz-alerts-token-list"><table class="widefat striped"><thead><tr><th>Token</th><th>Example value</th></tr></thead><tbody>';
         foreach (self::token_catalog($feed) as $token => $example) {
             $display = strlen($example) > 90 ? wp_html_excerpt($example, 90, '…') : $example;
             echo '<tr><td><button type="button" class="button-link fsanz-alerts-token" data-token="%' . esc_attr($token) . '%" title="Insert token">%' . esc_html($token) . '%</button></td><td>' . esc_html($display) . '</td></tr>';
         }
-        echo '</tbody></table></div></div><div>';
+        echo '</tbody></table></div></div></details>';
+        echo '<details class="fsanz-alerts-accordion" id="fsanz-alerts-template-section" open><summary>HTML merge template</summary><div class="fsanz-alerts-accordion-content">';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         echo '<input type="hidden" name="action" value="fsanz_alerts_save_template">';
         wp_nonce_field('fsanz_alerts_save_template');
-        echo '<label for="fsanz-alerts-template"><strong>HTML merge template</strong></label>';
+        echo '<label for="fsanz-alerts-template" class="screen-reader-text">HTML merge template code</label>';
         echo '<textarea id="fsanz-alerts-template" name="template" class="large-text code" rows="16">' . esc_textarea($template) . '</textarea>';
         submit_button('Save HTML merge template', 'primary', 'submit', false);
-        echo '</form>';
-        echo '<h3>Live preview</h3><p id="fsanz-alerts-preview-status" role="status" aria-live="polite">Previewing the selected recall.</p>';
+        echo '</form></div></details>';
+        echo '<details class="fsanz-alerts-accordion" id="fsanz-alerts-preview-section" open><summary>Live preview</summary><div class="fsanz-alerts-accordion-content">';
+        echo '<label for="fsanz-alerts-record"><strong>Preview record</strong></label>';
+        echo '<select id="fsanz-alerts-record" class="widefat">';
+        foreach ($feed['items'] as $index => $item) {
+            echo '<option value="' . esc_attr((string) $index) . '">' . esc_html($item['title']) . '</option>';
+        }
+        echo '</select>';
+        echo '<p id="fsanz-alerts-preview-status" role="status" aria-live="polite">Previewing the selected recall.</p>';
         $initial = self::render_template($template, $feed, $feed['items'][0]);
         echo '<iframe id="fsanz-alerts-preview" title="Alert page preview" sandbox="" srcdoc="' . esc_attr(self::preview_document($initial['html'])) . '"></iframe>';
-        echo '</div></div></div>';
+        echo '</div></details></div></div>';
     }
 
     public static function preview_document($html) {
