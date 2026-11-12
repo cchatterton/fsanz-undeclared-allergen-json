@@ -1,7 +1,7 @@
 # AlphaSys FSANZ Alerts
 
 - Author: AlphaSys
-- Version: 1.6.0
+- Version: 1.7.0
 - Status: Beta
 - Branding Mode: Author Branded
 
@@ -9,7 +9,7 @@ Publishes public JSON of recall cards labelled "Undeclared allergen" from the si
 
 Install the release ZIP through WordPress and visit **Settings → FSANZ Alerts** to refresh, edit the HTML merge template, and preview any recall. The Template tab places available tokens beside the HTML editor; the full-width Preview tab browses every cached recall with Previous and Next controls and offers Add now or Publish now for the selected missing recall. Click a token to insert it into the template. Tokens follow the `%item_problem%` pattern; nested JSON fields use underscore-separated paths, and the complete feed is available under `%feed_*%`. The REST namespace remains `fsanz-allergens/v1` for existing consumers.
 
-Save the template before importing. **Import next missing record** creates one `alert` post using the selected Draft or Published status. Select a featured-image token in the template editor; it is downloaded into the Media Library when an Alert is created. Hourly automation is off until an administrator enables it. When enabled, it refreshes the JSON and imports all missing recalls using the selected status; the switch pauses or resumes both jobs. Draft is the default, and changing the status does not alter existing Alerts. Existing Alerts, including those in Trash, are identified by their FSANZ detail URL and are not overwritten.
+Save the template before importing. **Import next missing record** creates one `alert` post using the selected Draft or Published status. Select a featured-image token in the template editor; it is downloaded into the Media Library when an Alert is created. Automation is off until an administrator enables it. The on/off switch, minutes interval, and Draft/Published switch sit on one row. The interval defaults to 60 minutes and controls both feed refresh and missing-record import; WP-Cron requires site traffic or a server cron trigger. Draft is the default, and changing the status does not alter existing Alerts. Existing Alerts, including those in Trash, are identified by their FSANZ detail URL and are not overwritten.
 
 Normal feature operation does not require AS Update Controller. The guarded client exposes installation, activation, and update actions on the Plugins screen when needed. Updates are published through [AS Update Controller](https://github.com/cchatterton/as-update-controller).
 

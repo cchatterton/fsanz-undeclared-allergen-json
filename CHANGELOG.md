@@ -2,6 +2,12 @@
 
 All notable changes to AlphaSys FSANZ Alerts are recorded here.
 
+## 1.7.0 - 2026-11-12
+
+- Added separate on/off and Draft/Published switches plus a minutes interval input on one row.
+- Schedule both refresh and import at the selected interval (1–1440 minutes, default 60).
+- Preserve automation off and Draft as the default settings.
+
 ## 1.6.0 - 2026-11-12
 
 - Fetch only the specified FSANZ recall-alert listing page, without following listing pagination.

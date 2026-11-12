@@ -2,6 +2,7 @@
 define('ABSPATH', __DIR__);
 define('DAY_IN_SECONDS', 86400);
 define('HOUR_IN_SECONDS', 3600);
+define('MINUTE_IN_SECONDS', 60);
 $GLOBALS['options'] = array();
 $GLOBALS['posts'] = array();
 $GLOBALS['meta'] = array();
@@ -16,7 +17,15 @@ class WP_Error {
 class FSANZ_Undeclared_Allergen_JSON {
     public static $refreshes = 0;
     public const AUTOMATION_OPTION = 'fsanz_alerts_hourly_enabled';
+    public const MINUTES_OPTION = 'fsanz_alerts_refresh_minutes';
+    public const RECURRENCE = 'fsanz_alerts_interval';
     public static function automation_enabled() { return get_option(self::AUTOMATION_OPTION, '0') === '1'; }
+    public static function refresh_minutes() { return (int) get_option(self::MINUTES_OPTION, 60); }
+    public static function interval_seconds() { return self::refresh_minutes() * MINUTE_IN_SECONDS; }
+    public static function schedule_matches($hook) {
+        $event = wp_get_scheduled_event($hook);
+        return $event && $event->schedule === self::RECURRENCE && $event->interval === self::interval_seconds();
+    }
     public static function current_feed() {
         $feed = get_option('fsanz_undeclared_allergen_feed');
         return is_array($feed) && ($feed['scope'] ?? '') === 'listing_first_page' ? $feed : false;
@@ -52,8 +61,9 @@ function update_post_meta($id, $key, $value) { $GLOBALS['meta'][$id][$key] = $va
 function wp_timezone() { return new DateTimeZone('Australia/Sydney'); }
 function wp_next_scheduled($hook) { return $GLOBALS['events'][$hook] ?? false; }
 function wp_schedule_single_event($timestamp, $hook) { $GLOBALS['events'][$hook] = $timestamp; }
-function wp_schedule_event($timestamp, $recurrence, $hook) { $GLOBALS['events'][$hook] = array($timestamp, $recurrence); }
+function wp_schedule_event($timestamp, $recurrence, $hook) { $GLOBALS['events'][$hook] = array($timestamp, $recurrence, FSANZ_Undeclared_Allergen_JSON::interval_seconds()); }
 function wp_get_schedule($hook) { return isset($GLOBALS['events'][$hook]) && is_array($GLOBALS['events'][$hook]) ? $GLOBALS['events'][$hook][1] : false; }
+function wp_get_scheduled_event($hook) { return isset($GLOBALS['events'][$hook]) ? (object) array('schedule' => $GLOBALS['events'][$hook][1], 'interval' => $GLOBALS['events'][$hook][2]) : false; }
 function wp_clear_scheduled_hook($hook) { unset($GLOBALS['events'][$hook]); }
 function wp_parse_url($url) { return parse_url($url); }
 function media_sideload_image($url, $post_id, $title, $return) { return 100 + $post_id; }
@@ -163,11 +173,15 @@ same(FSANZ_Alerts_Importer::existing_post_id($four['url']), 0, 'Earlier missing 
 same($GLOBALS['posts'][4]['post_status'], 'draft', 'Selected recall is draft');
 update_option(FSANZ_Undeclared_Allergen_JSON::AUTOMATION_OPTION, '1');
 FSANZ_Alerts_Importer::ensure_schedule();
-same(wp_get_schedule(FSANZ_Alerts_Importer::CRON), 'hourly', 'Hourly import schedule');
+same(wp_get_schedule(FSANZ_Alerts_Importer::CRON), FSANZ_Undeclared_Allergen_JSON::RECURRENCE, 'Custom import schedule');
+same(wp_get_scheduled_event(FSANZ_Alerts_Importer::CRON)->interval, 3600, 'Default 60-minute interval');
+update_option(FSANZ_Undeclared_Allergen_JSON::MINUTES_OPTION, 25);
+FSANZ_Alerts_Importer::ensure_schedule();
+same(wp_get_scheduled_event(FSANZ_Alerts_Importer::CRON)->interval, 1500, 'Changed interval reschedules import');
 update_option(FSANZ_Undeclared_Allergen_JSON::AUTOMATION_OPTION, '0');
 FSANZ_Alerts_Importer::ensure_schedule();
 same(wp_next_scheduled(FSANZ_Alerts_Importer::CRON), false, 'Automation toggle clears schedule');
-FSANZ_Alerts_Importer::hourly_import();
+FSANZ_Alerts_Importer::scheduled_import();
 same(FSANZ_Alerts_Importer::existing_post_id($four['url']), 0, 'Paused cron callback imports nothing');
 update_option(FSANZ_Alerts_Importer::POST_STATUS_OPTION, 'publish');
 $published = FSANZ_Alerts_Importer::run(1, false, 'manual selected', $four['url']);

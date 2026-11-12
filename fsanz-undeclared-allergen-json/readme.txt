@@ -3,12 +3,12 @@ Contributors: alphasys
 Tags: food-recall, allergens, json, fsanz
 Requires at least: 7.0
 Tested up to: 7.1.4
-Stable tag: 1.6.0
+Stable tag: 1.7.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Publishes an hourly JSON feed of FSANZ undeclared allergen recalls and their detail-page information.
+Publishes a configurable JSON feed of FSANZ undeclared allergen recalls and their detail-page information.
 
 == Description ==
 
@@ -16,7 +16,7 @@ For the listing, fetches only https://www.foodstandards.gov.au/food-recalls/reca
 
 The Settings > FSANZ Alerts page includes a token browser, HTML merge template editor, and live record preview in two tabs. The Template tab places tokens beside the HTML editor; the Preview tab uses the full width and browses every recall with Previous and Next controls and offers Add now or Publish now for the selected missing recall. Tokens use the form `%item_problem%` or `%item_details_recall_information_what_to_do%`. `item_*` is the selected recall; `feed_*` exposes every path in the full cached JSON, including indexed items. Array values are available as a combined token and by index. Click a token to insert it at the cursor. Templates are sanitised on render and inserted into a WordPress Custom HTML block.
 
-Choose an item image URL token for the imported post’s featured image; the HTML preview excludes that image. The plugin registers an `alert` post type. After saving a template, select Import next missing record to create one Alert using the selected Draft or Published status. Automation is off by default. When enabled, it refreshes the feed hourly and imports all missing records using the selected status. Draft is the default; changing the status does not alter existing Alerts. The switch can pause or resume both scheduled jobs. A record is identified by its FSANZ detail URL; published, draft, private, future, pending, and trashed Alerts are treated as existing. Existing Alerts are never overwritten by the import.
+Choose an item image URL token for the imported post’s featured image; the HTML preview excludes that image. The plugin registers an `alert` post type. After saving a template, select Import next missing record to create one Alert using the selected Draft or Published status. Automation is off by default. Three controls set on/off, minutes between refreshes (1–1440, default 60), and Draft/Published (default Draft). When enabled, the interval controls both feed refresh and import of all missing records using the selected status. Changing the status does not alter existing Alerts. A record is identified by its FSANZ detail URL; published, draft, private, future, pending, and trashed Alerts are treated as existing. Existing Alerts are never overwritten by the import.
 
 Feed URL: /wp-json/fsanz-allergens/v1/recalls
 
@@ -33,9 +33,13 @@ WP-Cron requires site traffic. Use a host scheduled task to trigger wp-cron.php 
 
 == External services ==
 
-This plugin requests public recall listing and detail pages from https://www.foodstandards.gov.au on hourly WP-Cron refreshes, when the hourly importer finds the cached feed older than one hour, and when an administrator clicks Refresh now. Featured-image imports also download the selected FSANZ product image. Each request exposes the site's server IP address to FSANZ as a normal web request. No visitor, account, or site content is sent in the request. FSANZ privacy policy: https://www.foodstandards.gov.au/legal-policies/privacy . FSANZ copyright and reuse conditions: https://www.foodstandards.gov.au/legal-policies/copyright .
+This plugin requests public recall listing and detail pages from https://www.foodstandards.gov.au on enabled WP-Cron refreshes at the configured minute interval, when the importer finds the cached feed older than that interval, and when an administrator clicks Refresh now. Featured-image imports also download the selected FSANZ product image. Each request exposes the site's server IP address to FSANZ as a normal web request. No visitor, account, or site content is sent in the request. FSANZ privacy policy: https://www.foodstandards.gov.au/legal-policies/privacy . FSANZ copyright and reuse conditions: https://www.foodstandards.gov.au/legal-policies/copyright .
 
 == Changelog ==
+
+= 1.7.0 =
+* Added separate on/off and Draft/Published switches plus a minutes interval input on one row.
+* Reschedule refresh and import jobs when the interval changes; default remains off and 60 minutes.
 
 = 1.6.0 =
 * Scan only the single FSANZ recall-alert listing page; continue fetching matching recall detail pages.

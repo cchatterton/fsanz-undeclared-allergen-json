@@ -17,18 +17,17 @@
     var missingCount = document.getElementById('fsanz-alerts-missing-count');
     var importNext = document.getElementById('fsanz-alerts-import-next');
     var tabs = Array.prototype.slice.call(document.querySelectorAll('.fsanz-alerts-tab'));
-    var automation = document.getElementById('fsanz-alerts-automation');
-    var postStatusForm = document.getElementById('fsanz-alerts-post-status');
-    if (automation) {
-        automation.querySelector('input[type="checkbox"]').addEventListener('change', function () {
-            automation.submit();
-        });
-    }
-    if (postStatusForm) {
-        postStatusForm.querySelectorAll('input[name="post_status"]').forEach(function (input) {
-            input.addEventListener('change', function () {
-                postStatusForm.submit();
-            });
+    var settingsForm = document.getElementById('fsanz-alerts-settings');
+    if (settingsForm) {
+        settingsForm.addEventListener('change', function (event) {
+            if (event.target.type === 'checkbox') {
+                event.target.parentNode.querySelector('.fsanz-alerts-switch-state').textContent = event.target.name === 'publish'
+                    ? (event.target.checked ? 'Published' : 'Draft')
+                    : (event.target.checked ? 'On' : 'Off');
+            }
+            if (settingsForm.reportValidity()) {
+                settingsForm.requestSubmit();
+            }
         });
     }
     if (!template || !record || !frame || !status || !recordNav) {

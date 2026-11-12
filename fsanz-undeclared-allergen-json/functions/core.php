@@ -8,6 +8,8 @@ final class FSANZ_Undeclared_Allergen_JSON {
     private const CRON = 'fsanz_undeclared_allergen_refresh';
     private const FEED_SCOPE = 'listing_first_page';
     public const AUTOMATION_OPTION = 'fsanz_alerts_hourly_enabled';
+    public const MINUTES_OPTION = 'fsanz_alerts_refresh_minutes';
+    public const RECURRENCE = 'fsanz_alerts_interval';
 
     public static function init() {
         add_action(self::CRON, array(__CLASS__, 'scheduled_refresh'));
@@ -15,7 +17,8 @@ final class FSANZ_Undeclared_Allergen_JSON {
         add_action('admin_menu', array(__CLASS__, 'admin_menu'));
         add_action('admin_enqueue_scripts', array(__CLASS__, 'admin_assets'));
         add_action('admin_post_fsanz_undeclared_allergen_refresh', array(__CLASS__, 'manual_refresh'));
-        add_action('admin_post_fsanz_alerts_toggle_automation', array(__CLASS__, 'toggle_automation'));
+        add_action('admin_post_fsanz_alerts_save_settings', array(__CLASS__, 'save_settings'));
+        add_filter('cron_schedules', array(__CLASS__, 'cron_schedules'));
         add_action('init', array(__CLASS__, 'ensure_schedule'));
     }
 
@@ -32,10 +35,32 @@ final class FSANZ_Undeclared_Allergen_JSON {
             wp_clear_scheduled_hook(self::CRON);
             return;
         }
-        if (wp_get_schedule(self::CRON) !== 'hourly') {
+        if (!self::schedule_matches(self::CRON)) {
             wp_clear_scheduled_hook(self::CRON);
-            wp_schedule_event(time() + 60, 'hourly', self::CRON);
+            wp_schedule_event(time() + 60, self::RECURRENCE, self::CRON);
         }
+    }
+
+    public static function refresh_minutes() {
+        $minutes = (int) get_option(self::MINUTES_OPTION, 60);
+        return $minutes >= 1 && $minutes <= 1440 ? $minutes : 60;
+    }
+
+    public static function interval_seconds() {
+        return self::refresh_minutes() * MINUTE_IN_SECONDS;
+    }
+
+    public static function cron_schedules($schedules) {
+        $schedules[self::RECURRENCE] = array(
+            'interval' => self::interval_seconds(),
+            'display' => 'FSANZ Alerts every ' . self::refresh_minutes() . ' minutes',
+        );
+        return $schedules;
+    }
+
+    public static function schedule_matches($hook) {
+        $event = wp_get_scheduled_event($hook);
+        return $event && $event->schedule === self::RECURRENCE && (int) $event->interval === self::interval_seconds();
     }
 
     public static function automation_enabled() {
@@ -48,15 +73,21 @@ final class FSANZ_Undeclared_Allergen_JSON {
         }
     }
 
-    public static function toggle_automation() {
+    public static function save_settings() {
         if (!current_user_can('manage_options')) {
             wp_die('Not allowed.');
         }
-        check_admin_referer('fsanz_alerts_toggle_automation');
+        check_admin_referer('fsanz_alerts_save_settings');
+        $raw_minutes = isset($_POST['refresh_minutes']) ? wp_unslash($_POST['refresh_minutes']) : '';
+        if (!is_string($raw_minutes) || !preg_match('/^\d+$/', $raw_minutes) || (int) $raw_minutes < 1 || (int) $raw_minutes > 1440) {
+            wp_die('Enter a refresh interval from 1 to 1440 minutes.');
+        }
+        update_option(self::MINUTES_OPTION, (int) $raw_minutes, false);
         update_option(self::AUTOMATION_OPTION, isset($_POST['enabled']) && $_POST['enabled'] === '1' ? '1' : '0', false);
+        update_option(FSANZ_Alerts_Importer::POST_STATUS_OPTION, isset($_POST['publish']) && $_POST['publish'] === '1' ? 'publish' : 'draft', false);
         self::ensure_schedule();
         FSANZ_Alerts_Importer::ensure_schedule();
-        wp_safe_redirect(admin_url('options-general.php?page=fsanz-allergen-json'));
+        wp_safe_redirect(admin_url('options-general.php?page=fsanz-allergen-json&settings_saved=1'));
         exit;
     }
 
@@ -395,9 +426,12 @@ final class FSANZ_Undeclared_Allergen_JSON {
         if (isset($_GET['template_saved'])) {
             echo '<div class="notice notice-success"><p>HTML merge template saved.</p></div>';
         }
+        if (isset($_GET['settings_saved'])) {
+            echo '<div class="notice notice-success"><p>Recall settings saved.</p></div>';
+        }
         echo '<header class="fsanz-alerts-hero"><div class="fsanz-alerts-hero-copy"><p class="fsanz-alerts-eyebrow">FOOD RECALL MONITORING</p><h2>FSANZ Alerts</h2><p>Undeclared allergen recalls, ready for review.</p></div>';
         echo '<span class="fsanz-alerts-version" aria-label="Version ' . esc_attr(FSANZ_ALLERGEN_VERSION) . '">v' . esc_html(FSANZ_ALLERGEN_VERSION) . '</span>';
-        echo '<div class="fsanz-alerts-capabilities" aria-label="Capabilities"><span>' . (self::automation_enabled() ? 'Hourly refresh' : 'Automation paused') . '</span><span>' . (FSANZ_Alerts_Importer::post_status() === 'publish' ? 'Published imports' : 'Draft imports') . '</span><span>Public JSON</span></div></header>';
+        echo '<div class="fsanz-alerts-capabilities" aria-label="Capabilities"><span>' . (self::automation_enabled() ? 'Every ' . esc_html((string) self::refresh_minutes()) . ' min' : 'Automation paused') . '</span><span>' . (FSANZ_Alerts_Importer::post_status() === 'publish' ? 'Published imports' : 'Draft imports') . '</span><span>Public JSON</span></div></header>';
         FSANZ_Alerts_Designer::render_status($feed);
         FSANZ_Alerts_Designer::render_admin($feed);
         echo '</div>';

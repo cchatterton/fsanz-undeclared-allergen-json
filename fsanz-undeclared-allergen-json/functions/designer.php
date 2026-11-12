@@ -234,14 +234,13 @@ final class FSANZ_Alerts_Designer {
         }
         submit_button(FSANZ_Alerts_Importer::post_status() === 'publish' ? 'Publish next missing record' : 'Import next missing record', 'primary', 'submit', false, $button_attributes);
         echo '</form></div>';
-        echo '<form id="fsanz-alerts-automation" method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="fsanz_alerts_toggle_automation">';
-        wp_nonce_field('fsanz_alerts_toggle_automation');
-        echo '<label><input type="checkbox" name="enabled" value="1" ' . checked(FSANZ_Undeclared_Allergen_JSON::automation_enabled(), true, false) . '> Enable hourly refresh and import all missing Alerts</label>';
-        echo '<noscript><button type="submit" class="button">Save automation</button></noscript></form>';
-        echo '<form id="fsanz-alerts-post-status" method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="fsanz_alerts_save_post_status">';
-        wp_nonce_field('fsanz_alerts_save_post_status');
-        echo '<fieldset><legend>Create imported Alerts as</legend><label><input type="radio" name="post_status" value="draft" ' . checked(FSANZ_Alerts_Importer::post_status(), 'draft', false) . '> Draft</label><label><input type="radio" name="post_status" value="publish" ' . checked(FSANZ_Alerts_Importer::post_status(), 'publish', false) . '> Published</label></fieldset>';
-        echo '<noscript><button type="submit" class="button">Save import status</button></noscript></form></div>';
+        echo '<form id="fsanz-alerts-settings" method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="fsanz_alerts_save_settings">';
+        wp_nonce_field('fsanz_alerts_save_settings');
+        echo '<div class="fsanz-alerts-setting-row">';
+        echo '<div class="fsanz-alerts-setting"><span class="fsanz-alerts-setting-title">Auto refresh and import</span><label class="fsanz-alerts-switch"><input type="checkbox" role="switch" name="enabled" value="1" aria-label="Auto refresh and import" ' . checked(FSANZ_Undeclared_Allergen_JSON::automation_enabled(), true, false) . '><span class="fsanz-alerts-switch-track" aria-hidden="true"></span><span class="fsanz-alerts-switch-state">' . (FSANZ_Undeclared_Allergen_JSON::automation_enabled() ? 'On' : 'Off') . '</span></label></div>';
+        echo '<div class="fsanz-alerts-setting"><label class="fsanz-alerts-setting-title" for="fsanz-alerts-refresh-minutes">Minutes between refreshes</label><input id="fsanz-alerts-refresh-minutes" name="refresh_minutes" type="number" min="1" max="1440" step="1" required value="' . esc_attr((string) FSANZ_Undeclared_Allergen_JSON::refresh_minutes()) . '"></div>';
+        echo '<div class="fsanz-alerts-setting"><span class="fsanz-alerts-setting-title">Create imported Alerts as</span><label class="fsanz-alerts-switch"><input type="checkbox" role="switch" name="publish" value="1" aria-label="Publish new Alerts" ' . checked(FSANZ_Alerts_Importer::post_status(), 'publish', false) . '><span class="fsanz-alerts-switch-track" aria-hidden="true"></span><span class="fsanz-alerts-switch-state">' . (FSANZ_Alerts_Importer::post_status() === 'publish' ? 'Published' : 'Draft') . '</span></label></div>';
+        echo '</div><noscript><button type="submit" class="button">Save settings</button></noscript></form></div>';
     }
 
     public static function render_admin($feed) {

@@ -15,9 +15,8 @@ final class FSANZ_Alerts_Importer {
     public static function init() {
         add_action('init', array(__CLASS__, 'register_post_type'), 0);
         add_action('init', array(__CLASS__, 'ensure_schedule'));
-        add_action(self::CRON, array(__CLASS__, 'hourly_import'));
+        add_action(self::CRON, array(__CLASS__, 'scheduled_import'));
         add_action('admin_post_fsanz_alerts_import_next', array(__CLASS__, 'manual_import_next'));
-        add_action('admin_post_fsanz_alerts_save_post_status', array(__CLASS__, 'save_post_status'));
     }
 
     public static function activate() {
@@ -61,15 +60,15 @@ final class FSANZ_Alerts_Importer {
             wp_clear_scheduled_hook(self::CRON);
             return;
         }
-        if (wp_get_schedule(self::CRON) !== 'hourly') {
+        if (!FSANZ_Undeclared_Allergen_JSON::schedule_matches(self::CRON)) {
             wp_clear_scheduled_hook(self::CRON);
-            wp_schedule_event(time() + 180, 'hourly', self::CRON);
+            wp_schedule_event(time() + 180, FSANZ_Undeclared_Allergen_JSON::RECURRENCE, self::CRON);
         }
     }
 
-    public static function hourly_import() {
+    public static function scheduled_import() {
         if (FSANZ_Undeclared_Allergen_JSON::automation_enabled()) {
-            self::run(0, true, 'hourly');
+            self::run(0, true, 'scheduled');
         }
     }
 
@@ -90,20 +89,6 @@ final class FSANZ_Alerts_Importer {
 
     public static function post_status() {
         return get_option(self::POST_STATUS_OPTION, 'draft') === 'publish' ? 'publish' : 'draft';
-    }
-
-    public static function save_post_status() {
-        if (!current_user_can('manage_options')) {
-            wp_die('Not allowed.');
-        }
-        check_admin_referer('fsanz_alerts_save_post_status');
-        $status = isset($_POST['post_status']) ? wp_unslash($_POST['post_status']) : '';
-        if (!in_array($status, array('draft', 'publish'), true)) {
-            wp_die('Invalid Alert status.');
-        }
-        update_option(self::POST_STATUS_OPTION, $status, false);
-        wp_safe_redirect(admin_url('options-general.php?page=fsanz-allergen-json'));
-        exit;
     }
 
     public static function existing_post_id($url) {
@@ -163,7 +148,7 @@ final class FSANZ_Alerts_Importer {
             }
             $feed = FSANZ_Undeclared_Allergen_JSON::current_feed();
             $generated = is_array($feed) && !empty($feed['generated_at']) ? strtotime($feed['generated_at']) : false;
-            if ($refresh && (!$generated || $generated < time() - HOUR_IN_SECONDS)) {
+            if ($refresh && (!$generated || $generated < time() - FSANZ_Undeclared_Allergen_JSON::interval_seconds())) {
                 if (!FSANZ_Undeclared_Allergen_JSON::refresh()) {
                     $status['error'] = 'The FSANZ feed refresh failed. No records were imported.';
                     return $status;
