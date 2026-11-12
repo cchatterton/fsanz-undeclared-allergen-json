@@ -3,7 +3,7 @@ Contributors: alphasys
 Tags: food-recall, allergens, json, fsanz
 Requires at least: 7.0
 Tested up to: 7.1.4
-Stable tag: 1.7.0
+Stable tag: 1.7.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -36,6 +36,9 @@ WP-Cron requires site traffic. Use a host scheduled task to trigger wp-cron.php 
 This plugin requests public recall listing and detail pages from https://www.foodstandards.gov.au on enabled WP-Cron refreshes at the configured minute interval, when the importer finds the cached feed older than that interval, and when an administrator clicks Refresh now. Featured-image imports also download the selected FSANZ product image. Each request exposes the site's server IP address to FSANZ as a normal web request. No visitor, account, or site content is sent in the request. FSANZ privacy policy: https://www.foodstandards.gov.au/legal-policies/privacy . FSANZ copyright and reuse conditions: https://www.foodstandards.gov.au/legal-policies/copyright .
 
 == Changelog ==
+
+= 1.7.1 =
+* Left-align the three settings controls and give the full-width Preview iframe a viewport-height display.
 
 = 1.7.0 =
 * Added separate on/off and Draft/Published switches plus a minutes interval input on one row.

@@ -112,9 +112,9 @@
 }
 
 .fsanz-alerts-admin .fsanz-alerts-setting-row {
-    display: grid;
-    gap: 1rem 2rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 3rem;
     margin-top: 0.75rem;
 }
 
@@ -339,7 +339,8 @@
 .fsanz-alerts-admin #fsanz-alerts-preview {
     background: #fff;
     border: 0.0625rem solid #d5dfe5;
-    min-height: 36rem;
+    box-sizing: border-box;
+    height: 100vh;
     width: 100%;
 }
 
@@ -376,6 +377,7 @@
 
 @media (max-width: 56rem) {
     .fsanz-alerts-admin .fsanz-alerts-setting-row {
+        display: grid;
         grid-template-columns: minmax(0, 1fr);
     }
 

@@ -1,7 +1,7 @@
 # AlphaSys FSANZ Alerts
 
 - Author: AlphaSys
-- Version: 1.7.0
+- Version: 1.7.1
 - Status: Beta
 - Branding Mode: Author Branded
 

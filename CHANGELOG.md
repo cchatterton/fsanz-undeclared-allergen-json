@@ -2,6 +2,11 @@
 
 All notable changes to AlphaSys FSANZ Alerts are recorded here.
 
+## 1.7.1 - 2026-11-12
+
+- Left-align the three settings controls as a compact group.
+- Expand the full-width Preview iframe to the browser viewport height.
+
 ## 1.7.0 - 2026-11-12
 
 - Added separate on/off and Draft/Published switches plus a minutes interval input on one row.
