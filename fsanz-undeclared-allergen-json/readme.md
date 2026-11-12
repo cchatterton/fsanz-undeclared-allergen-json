@@ -1,11 +1,11 @@
 # AlphaSys FSANZ Alerts
 
 - Author: AlphaSys
-- Version: 1.5.0
+- Version: 1.6.0
 - Status: Beta
 - Branding Mode: Author Branded
 
-Publishes public JSON of FSANZ recall cards labelled "Undeclared allergen". Each item includes structured recall information from its detail page; `problem` is also available directly on the item. The plugin retains the last successful feed if a refresh fails.
+Publishes public JSON of recall cards labelled "Undeclared allergen" from the single page [FSANZ recall-alert listing](https://www.foodstandards.gov.au/food-recalls/recall-alert). Each item includes structured recall information from its detail page; `problem` is also available directly on the item. The plugin retains the last successful single-page feed if a refresh fails. After upgrading from the former multi-page feed, select Refresh now to replace that older cache; existing Alert posts are not deleted.
 
 Install the release ZIP through WordPress and visit **Settings → FSANZ Alerts** to refresh, edit the HTML merge template, and preview any recall. The Template tab places available tokens beside the HTML editor; the full-width Preview tab browses every cached recall with Previous and Next controls and offers Add now or Publish now for the selected missing recall. Click a token to insert it into the template. Tokens follow the `%item_problem%` pattern; nested JSON fields use underscore-separated paths, and the complete feed is available under `%feed_*%`. The REST namespace remains `fsanz-allergens/v1` for existing consumers.
 

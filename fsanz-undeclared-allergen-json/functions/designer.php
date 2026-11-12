@@ -29,7 +29,7 @@ final class FSANZ_Alerts_Designer {
         check_admin_referer('fsanz_alerts_save_template');
         $raw = isset($_POST['template']) ? wp_unslash($_POST['template']) : '';
         $template = is_string($raw) ? $raw : '';
-        $feed = get_option('fsanz_undeclared_allergen_feed');
+        $feed = FSANZ_Undeclared_Allergen_JSON::current_feed();
         $image_token = isset($_POST['featured_image_token']) ? wp_unslash($_POST['featured_image_token']) : '';
         $options = self::image_token_options($feed);
         if (!is_string($image_token) || ($image_token !== '' && !isset($options[$image_token]))) {
@@ -166,7 +166,7 @@ final class FSANZ_Alerts_Designer {
             wp_send_json_error(array('message' => 'Not allowed.'), 403);
         }
         check_ajax_referer('fsanz_alerts_preview', 'nonce');
-        $feed = get_option('fsanz_undeclared_allergen_feed');
+        $feed = FSANZ_Undeclared_Allergen_JSON::current_feed();
         $index = isset($_POST['record']) ? absint($_POST['record']) : 0;
         if (!is_array($feed) || !isset($feed['items'][$index])) {
             wp_send_json_error(array('message' => 'The selected recall is unavailable.'), 404);
@@ -185,7 +185,7 @@ final class FSANZ_Alerts_Designer {
             wp_send_json_error(array('message' => 'Not allowed.'), 403);
         }
         check_ajax_referer('fsanz_alerts_preview', 'nonce');
-        $feed = get_option('fsanz_undeclared_allergen_feed');
+        $feed = FSANZ_Undeclared_Allergen_JSON::current_feed();
         $index = isset($_POST['record']) ? absint($_POST['record']) : 0;
         if (!is_array($feed) || !isset($feed['items'][$index]['url'])) {
             wp_send_json_error(array('message' => 'The selected recall is unavailable.'), 404);
@@ -210,9 +210,9 @@ final class FSANZ_Alerts_Designer {
         $missing = is_array($feed) ? FSANZ_Alerts_Importer::missing_count($feed) : 0;
         echo '<div class="fsanz-alerts-panel fsanz-alerts-status"><h2>Recall feed</h2>';
         if (is_array($feed)) {
-        echo '<p>' . esc_html((string) $feed['count']) . ' recalls · <span id="fsanz-alerts-missing-count">' . esc_html((string) $missing) . '</span> missing · Updated ' . esc_html(wp_date('j M Y, g:i a', strtotime($feed['generated_at']))) . '</p>';
+            echo '<p>' . esc_html((string) $feed['count']) . ' recalls · <span id="fsanz-alerts-missing-count">' . esc_html((string) $missing) . '</span> missing · Updated ' . esc_html(wp_date('j M Y, g:i a', strtotime($feed['generated_at']))) . '</p>';
         } else {
-            echo '<p>No feed yet.</p>';
+            echo '<p>Refresh now to load the current listing page.</p>';
         }
         if (is_array($status) && !empty($status['error'])) {
             echo '<p role="alert">Import: ' . esc_html($status['error']) . '</p>';

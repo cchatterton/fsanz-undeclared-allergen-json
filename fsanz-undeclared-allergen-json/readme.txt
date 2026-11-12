@@ -3,7 +3,7 @@ Contributors: alphasys
 Tags: food-recall, allergens, json, fsanz
 Requires at least: 7.0
 Tested up to: 7.1.4
-Stable tag: 1.5.0
+Stable tag: 1.6.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,7 +12,7 @@ Publishes an hourly JSON feed of FSANZ undeclared allergen recalls and their det
 
 == Description ==
 
-Fetches all pages of the FSANZ recall listing hourly when automation is enabled. It selects cards labelled "Undeclared allergen", then fetches each recall detail page. The public REST feed contains the full recall information table and a top-level problem field for each item. A failed refresh leaves the last successful feed available.
+For the listing, fetches only https://www.foodstandards.gov.au/food-recalls/recall-alert ; it does not follow pagination. It selects cards labelled "Undeclared allergen", then fetches each recall detail page. The public REST feed contains the full recall information table and a top-level problem field for each item. A failed refresh leaves the last successful single-page feed available. On upgrade from the former multi-page feed, select Refresh now before using the JSON or imports; existing Alert posts remain unchanged.
 
 The Settings > FSANZ Alerts page includes a token browser, HTML merge template editor, and live record preview in two tabs. The Template tab places tokens beside the HTML editor; the Preview tab uses the full width and browses every recall with Previous and Next controls and offers Add now or Publish now for the selected missing recall. Tokens use the form `%item_problem%` or `%item_details_recall_information_what_to_do%`. `item_*` is the selected recall; `feed_*` exposes every path in the full cached JSON, including indexed items. Array values are available as a combined token and by index. Click a token to insert it at the cursor. Templates are sanitised on render and inserted into a WordPress Custom HTML block.
 
@@ -36,6 +36,10 @@ WP-Cron requires site traffic. Use a host scheduled task to trigger wp-cron.php 
 This plugin requests public recall listing and detail pages from https://www.foodstandards.gov.au on hourly WP-Cron refreshes, when the hourly importer finds the cached feed older than one hour, and when an administrator clicks Refresh now. Featured-image imports also download the selected FSANZ product image. Each request exposes the site's server IP address to FSANZ as a normal web request. No visitor, account, or site content is sent in the request. FSANZ privacy policy: https://www.foodstandards.gov.au/legal-policies/privacy . FSANZ copyright and reuse conditions: https://www.foodstandards.gov.au/legal-policies/copyright .
 
 == Changelog ==
+
+= 1.6.0 =
+* Scan only the single FSANZ recall-alert listing page; continue fetching matching recall detail pages.
+* Ignore the former multi-page cache until a single-page refresh replaces it. Existing Alert posts remain unchanged.
 
 = 1.5.0 =
 * Added a Draft or Published choice for new manual and hourly Alert imports; Draft remains the default.

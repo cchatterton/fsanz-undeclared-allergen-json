@@ -1,8 +1,8 @@
 # AlphaSys FSANZ Alerts
 
-WordPress plugin for an hourly JSON feed of FSANZ undeclared allergen recalls. The plugin folder and main file retain the original identity for in-place upgrades.
+WordPress plugin for a JSON feed of undeclared allergen recalls shown on the single FSANZ recall-alert listing page. It fetches matching detail pages but does not follow listing pagination. The plugin folder and main file retain the original identity for in-place upgrades.
 
-The Settings > FSANZ Alerts screen provides a token browser, an HTML merge template editor, and a live preview in two tabs: a side-by-side token browser and HTML editor, and a full-width preview with AJAX Previous and Next controls, plus Add now or Publish now for the selected missing recall. Saved templates create `alert` posts through a one-record manual action or hourly automation. New posts default to Draft; an administrator can choose Published for both import paths. The selected image token supplies the featured image; automation is off by default. Enabling the switch schedules both hourly jobs and imports all missing recalls using the chosen post status. The source detail URL is the unique record key.
+The Settings > FSANZ Alerts screen provides a token browser, an HTML merge template editor, and a live preview in two tabs: a side-by-side token browser and HTML editor, and a full-width preview with AJAX Previous and Next controls, plus Add now or Publish now for the selected missing recall. Saved templates create `alert` posts through a one-record manual action or hourly automation. New posts default to Draft; an administrator can choose Published for both import paths. The selected image token supplies the featured image; automation is off by default. Enabling the switch schedules both hourly jobs and imports all missing recalls using the chosen post status. The source detail URL is the unique record key. After upgrading from the former multi-page feed, use Refresh now to create the single-page cache; older Alert posts remain unchanged.
 
 - **Plugin slug:** `fsanz-undeclared-allergen-json`
 - **Main file:** `fsanz-undeclared-allergen-json/fsanz-undeclared-allergen-json.php`

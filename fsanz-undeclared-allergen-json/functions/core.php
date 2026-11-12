@@ -6,7 +6,7 @@ final class FSANZ_Undeclared_Allergen_JSON {
     private const OPTION = 'fsanz_undeclared_allergen_feed';
     private const ERROR_OPTION = 'fsanz_undeclared_allergen_error';
     private const CRON = 'fsanz_undeclared_allergen_refresh';
-    private const MAX_PAGES = 100;
+    private const FEED_SCOPE = 'listing_first_page';
     public const AUTOMATION_OPTION = 'fsanz_alerts_hourly_enabled';
 
     public static function init() {
@@ -69,11 +69,16 @@ final class FSANZ_Undeclared_Allergen_JSON {
     }
 
     public static function serve_feed() {
-        $feed = get_option(self::OPTION);
+        $feed = self::current_feed();
         if (!is_array($feed)) {
-            return new WP_Error('feed_not_ready', 'The first FSANZ refresh has not completed yet.', array('status' => 503));
+            return new WP_Error('feed_not_ready', 'Refresh the FSANZ listing page to prepare the single-page feed.', array('status' => 503));
         }
         return rest_ensure_response($feed);
+    }
+
+    public static function current_feed() {
+        $feed = get_option(self::OPTION);
+        return is_array($feed) && isset($feed['scope']) && $feed['scope'] === self::FEED_SCOPE ? $feed : false;
     }
 
     public static function refresh() {
@@ -82,39 +87,24 @@ final class FSANZ_Undeclared_Allergen_JSON {
             return false;
         }
 
+        $response = wp_remote_get(self::SOURCE, array(
+            'timeout' => 20,
+            'redirection' => 3,
+            'headers' => array('Accept' => 'text/html'),
+        ));
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+            return self::fail('Failed to fetch the FSANZ listing page.');
+        }
+        $parsed = self::parse_page(wp_remote_retrieve_body($response));
+        if (is_wp_error($parsed)) {
+            return self::fail('Could not parse the FSANZ listing page: ' . $parsed->get_error_message());
+        }
         $items = array();
         $seen = array();
-        $last_page = null;
-
-        for ($page = 0; $page < self::MAX_PAGES; $page++) {
-            $url = $page ? self::SOURCE . '?page=' . $page : self::SOURCE;
-            $response = wp_remote_get($url, array(
-                'timeout' => 20,
-                'redirection' => 3,
-                'headers' => array('Accept' => 'text/html'),
-            ));
-            if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
-                return self::fail('Failed to fetch FSANZ page ' . ($page + 1) . '.');
-            }
-
-            $parsed = self::parse_page(wp_remote_retrieve_body($response), $page === 0);
-            if (is_wp_error($parsed)) {
-                return self::fail('Could not parse FSANZ page ' . ($page + 1) . ': ' . $parsed->get_error_message());
-            }
-            if ($page === 0) {
-                $last_page = $parsed['last_page'];
-                if ($last_page >= self::MAX_PAGES) {
-                    return self::fail('FSANZ pagination exceeds the plugin page limit.');
-                }
-            }
-            foreach ($parsed['items'] as $item) {
-                if (!isset($seen[$item['url']])) {
-                    $seen[$item['url']] = true;
-                    $items[] = $item;
-                }
-            }
-            if ($page >= $last_page) {
-                break;
+        foreach ($parsed['items'] as $item) {
+            if (!isset($seen[$item['url']])) {
+                $seen[$item['url']] = true;
+                $items[] = $item;
             }
         }
 
@@ -142,6 +132,7 @@ final class FSANZ_Undeclared_Allergen_JSON {
 
         $feed = array(
             'source' => self::SOURCE,
+            'scope' => self::FEED_SCOPE,
             'attribution' => 'Food Standards Australia New Zealand',
             'type' => 'Undeclared allergen',
             'generated_at' => gmdate('c'),
@@ -158,7 +149,7 @@ final class FSANZ_Undeclared_Allergen_JSON {
         return false;
     }
 
-    public static function parse_page($html, $require_last_page = false) {
+    public static function parse_page($html) {
         $dom = new DOMDocument();
         $previous = libxml_use_internal_errors(true);
         $loaded = $dom->loadHTML('<?xml encoding="utf-8" ?>' . $html);
@@ -206,14 +197,7 @@ final class FSANZ_Undeclared_Allergen_JSON {
             );
         }
 
-        $last_page = 0;
-        $last = self::first_node($xpath, '//a[@rel="last"]');
-        if ($last && preg_match('/(?:\?|&)page=(\d+)/', $last->getAttribute('href'), $matches)) {
-            $last_page = (int) $matches[1];
-        } elseif ($require_last_page && $xpath->query('//nav[contains(concat(" ", normalize-space(@class), " "), " pager-nav ")]')->length) {
-            return new WP_Error('bad_pagination', 'Pagination could not be determined');
-        }
-        return array('items' => $items, 'last_page' => $last_page);
+        return array('items' => $items);
     }
 
     private static function first_node($xpath, $query, $context = null) {
@@ -402,7 +386,7 @@ final class FSANZ_Undeclared_Allergen_JSON {
         if (!current_user_can('manage_options')) {
             return;
         }
-        $feed = get_option(self::OPTION);
+        $feed = self::current_feed();
         $error = get_option(self::ERROR_OPTION);
         echo '<div class="wrap fsanz-alerts-admin"><h1 class="screen-reader-text">FSANZ Alerts</h1>';
         if ($error) {

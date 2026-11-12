@@ -17,6 +17,10 @@ class FSANZ_Undeclared_Allergen_JSON {
     public static $refreshes = 0;
     public const AUTOMATION_OPTION = 'fsanz_alerts_hourly_enabled';
     public static function automation_enabled() { return get_option(self::AUTOMATION_OPTION, '0') === '1'; }
+    public static function current_feed() {
+        $feed = get_option('fsanz_undeclared_allergen_feed');
+        return is_array($feed) && ($feed['scope'] ?? '') === 'listing_first_page' ? $feed : false;
+    }
     public static function refresh() {
         self::$refreshes++;
         $feed = get_option('fsanz_undeclared_allergen_feed');
@@ -80,7 +84,9 @@ $two = array(
     'locations' => array('QLD'),
     'details' => array('recall_information' => array('problem' => 'Undeclared milk', 'what_to_do' => 'Return the product')),
 );
-$feed = array('source' => 'https://www.foodstandards.gov.au/food-recalls/recall-alert', 'count' => 2, 'generated_at' => gmdate('c'), 'items' => array($one, $two));
+$feed = array('source' => 'https://www.foodstandards.gov.au/food-recalls/recall-alert', 'scope' => 'listing_first_page', 'count' => 2, 'generated_at' => gmdate('c'), 'items' => array($one, $two));
+update_option('fsanz_undeclared_allergen_feed', array('items' => array($one, $two)));
+same(FSANZ_Undeclared_Allergen_JSON::current_feed(), false, 'Older multi-page feed is unavailable');
 update_option('fsanz_undeclared_allergen_feed', $feed);
 same(FSANZ_Undeclared_Allergen_JSON::automation_enabled(), false, 'Automation defaults off');
 same(FSANZ_Alerts_Importer::post_status(), 'draft', 'New Alerts default to draft');

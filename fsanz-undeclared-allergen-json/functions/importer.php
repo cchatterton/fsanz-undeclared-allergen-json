@@ -161,17 +161,17 @@ final class FSANZ_Alerts_Importer {
                 $status['error'] = 'Save an HTML merge template before importing.';
                 return $status;
             }
-            $feed = get_option('fsanz_undeclared_allergen_feed');
+            $feed = FSANZ_Undeclared_Allergen_JSON::current_feed();
             $generated = is_array($feed) && !empty($feed['generated_at']) ? strtotime($feed['generated_at']) : false;
             if ($refresh && (!$generated || $generated < time() - HOUR_IN_SECONDS)) {
                 if (!FSANZ_Undeclared_Allergen_JSON::refresh()) {
                     $status['error'] = 'The FSANZ feed refresh failed. No records were imported.';
                     return $status;
                 }
-                $feed = get_option('fsanz_undeclared_allergen_feed');
+                $feed = FSANZ_Undeclared_Allergen_JSON::current_feed();
             }
             if (!is_array($feed) || !isset($feed['items']) || !is_array($feed['items'])) {
-                $status['error'] = 'No successful JSON feed is available yet.';
+                $status['error'] = 'Refresh the FSANZ listing page before importing.';
                 return $status;
             }
             $image_token = FSANZ_Alerts_Designer::saved_image_token($feed);

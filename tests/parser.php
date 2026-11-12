@@ -41,4 +41,32 @@ $detail = FSANZ_Undeclared_Allergen_JSON::parse_detail($legacy);
 assert_value($detail['recall_information']['problem'], 'Undeclared milk.', 'Legacy problem');
 assert_value($detail['recall_information']['food_safety_hazard'], 'Allergic reaction.', 'Legacy hazard');
 assert_value($detail['recall_information']['what_to_do'], 'Do not consume.', 'Legacy action');
+
+$GLOBALS['mock_listing'] = $listing . '<nav class="pager-nav"><a rel="last" href="?page=18">Last</a></nav>';
+$GLOBALS['mock_detail'] = $modern;
+$GLOBALS['requests'] = array();
+$GLOBALS['options'] = array('fsanz_undeclared_allergen_feed' => array('items' => array('legacy multi-page item')));
+function wp_remote_get($url, $args) {
+    $GLOBALS['requests'][] = $url;
+    if ($url === 'https://www.foodstandards.gov.au/food-recalls/recall-alert') {
+        return array('body' => $GLOBALS['mock_listing'], 'code' => 200);
+    }
+    if ($url === 'https://www.foodstandards.gov.au/food-recalls/recall-alert/test') {
+        return array('body' => $GLOBALS['mock_detail'], 'code' => 200);
+    }
+    throw new RuntimeException('Unexpected request: ' . $url);
+}
+function is_wp_error($value) { return $value instanceof WP_Error; }
+function wp_remote_retrieve_response_code($response) { return $response['code']; }
+function wp_remote_retrieve_body($response) { return $response['body']; }
+function get_option($key) { return $GLOBALS['options'][$key] ?? false; }
+function update_option($key, $value) { $GLOBALS['options'][$key] = $value; }
+function delete_option($key) { unset($GLOBALS['options'][$key]); }
+assert_value(FSANZ_Undeclared_Allergen_JSON::current_feed(), false, 'Old multi-page cache ignored');
+assert_value(FSANZ_Undeclared_Allergen_JSON::refresh(), true, 'Single listing refresh succeeded');
+assert_value($GLOBALS['requests'], array(
+    'https://www.foodstandards.gov.au/food-recalls/recall-alert',
+    'https://www.foodstandards.gov.au/food-recalls/recall-alert/test',
+), 'Only the base listing and matching detail are fetched');
+assert_value(FSANZ_Undeclared_Allergen_JSON::current_feed()['count'], 1, 'First-page feed contains one matching recall');
 echo "Parser tests passed\n";

@@ -2,6 +2,12 @@
 
 All notable changes to AlphaSys FSANZ Alerts are recorded here.
 
+## 1.6.0 - 2026-11-12
+
+- Fetch only the specified FSANZ recall-alert listing page, without following listing pagination.
+- Continue fetching detail pages for matching Undeclared allergen cards.
+- Ignore the former multi-page cache until a single-page refresh replaces it; existing Alert posts remain unchanged.
+
 ## 1.5.0 - 2026-11-12
 
 - Added a Draft or Published choice for new manual and hourly Alert imports, with Draft as the default.
