@@ -5,6 +5,7 @@ final class FSANZ_Alerts_Designer {
     public static function init() {
         add_action('admin_post_fsanz_alerts_save_template', array(__CLASS__, 'save_template'));
         add_action('wp_ajax_fsanz_alerts_preview', array(__CLASS__, 'ajax_preview'));
+        add_action('wp_ajax_fsanz_alerts_import_record', array(__CLASS__, 'ajax_import_record'));
     }
 
     public static function example_template() {
@@ -172,10 +173,34 @@ final class FSANZ_Alerts_Designer {
         }
         $template = isset($_POST['template']) ? wp_unslash($_POST['template']) : '';
         $rendered = self::render_template($template, $feed, $feed['items'][$index]);
-        $image_token = isset($_POST['featured_image_token']) ? wp_unslash($_POST['featured_image_token']) : '';
-        $image_url = is_string($image_token) ? self::image_url_for_record($feed, $feed['items'][$index], $image_token) : '';
-        $rendered['document'] = self::preview_document($rendered['html'], $image_url, $feed['items'][$index]['title']);
+        $rendered['document'] = self::preview_document($rendered['html']);
+        $rendered['missing'] = !FSANZ_Alerts_Importer::existing_post_id($feed['items'][$index]['url']);
+        $rendered['template_saved'] = FSANZ_Alerts_Importer::saved_template() !== '';
         wp_send_json_success($rendered);
+    }
+
+    public static function ajax_import_record() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Not allowed.'), 403);
+        }
+        check_ajax_referer('fsanz_alerts_preview', 'nonce');
+        $feed = get_option('fsanz_undeclared_allergen_feed');
+        $index = isset($_POST['record']) ? absint($_POST['record']) : 0;
+        if (!is_array($feed) || !isset($feed['items'][$index]['url'])) {
+            wp_send_json_error(array('message' => 'The selected recall is unavailable.'), 404);
+        }
+        $url = $feed['items'][$index]['url'];
+        if (FSANZ_Alerts_Importer::existing_post_id($url)) {
+            wp_send_json_error(array('message' => 'This recall has already been imported.'), 409);
+        }
+        $result = FSANZ_Alerts_Importer::run(1, false, 'manual selected', $url);
+        if (!$result['imported']) {
+            wp_send_json_error(array('message' => $result['error'] !== '' ? $result['error'] : 'The selected recall could not be imported.'), 500);
+        }
+        wp_send_json_success(array(
+            'message' => $result['warnings'] ? 'Draft created. Featured image: ' . implode(' ', $result['warnings']) : 'Draft created.',
+            'edit_url' => get_edit_post_link($result['post_id'], 'raw'),
+        ));
     }
 
     public static function render_status($feed) {
@@ -184,7 +209,7 @@ final class FSANZ_Alerts_Designer {
         $missing = is_array($feed) ? FSANZ_Alerts_Importer::missing_count($feed) : 0;
         echo '<div class="fsanz-alerts-panel fsanz-alerts-status"><h2>Recall feed</h2>';
         if (is_array($feed)) {
-            echo '<p>' . esc_html((string) $feed['count']) . ' recalls · ' . esc_html((string) $missing) . ' missing · Updated ' . esc_html(wp_date('j M Y, g:i a', strtotime($feed['generated_at']))) . '</p>';
+        echo '<p>' . esc_html((string) $feed['count']) . ' recalls · <span id="fsanz-alerts-missing-count">' . esc_html((string) $missing) . '</span> missing · Updated ' . esc_html(wp_date('j M Y, g:i a', strtotime($feed['generated_at']))) . '</p>';
         } else {
             echo '<p>No feed yet.</p>';
         }
@@ -202,8 +227,11 @@ final class FSANZ_Alerts_Designer {
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         echo '<input type="hidden" name="action" value="fsanz_alerts_import_next">';
         wp_nonce_field('fsanz_alerts_import_next');
-        $button_attributes = $saved === '' || $missing === 0 ? array('disabled' => 'disabled') : array();
-        submit_button('Import next missing record', 'secondary', 'submit', false, $button_attributes);
+        $button_attributes = array('id' => 'fsanz-alerts-import-next');
+        if ($saved === '' || $missing === 0) {
+            $button_attributes['disabled'] = 'disabled';
+        }
+        submit_button('Import next missing record', 'primary', 'submit', false, $button_attributes);
         echo '</form></div>';
         echo '<form id="fsanz-alerts-automation" method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="fsanz_alerts_toggle_automation">';
         wp_nonce_field('fsanz_alerts_toggle_automation');
@@ -216,17 +244,16 @@ final class FSANZ_Alerts_Designer {
         $template = $saved !== '' ? $saved : self::example_template();
 
         echo '<div class="fsanz-alerts-panel fsanz-alerts-designer"><h2>Page designer</h2>';
-        echo '<p>Design draft Alert content with tokens, then preview and save it.</p>';
-        if (isset($_GET['template_saved'])) {
-            echo '<div class="notice notice-success inline"><p>HTML merge template saved.</p></div>';
-        }
+        echo '<p>Build the Alert template, then preview its content with any recall.</p>';
         if (!is_array($feed) || empty($feed['items'])) {
             echo '<p>Refresh the FSANZ feed to load records and tokens for preview.</p></div>';
             return;
         }
-        echo '<div class="fsanz-alerts-accordion-stack">';
-        echo '<details class="fsanz-alerts-accordion" id="fsanz-alerts-tokens-section" open><summary>Available tokens</summary><div class="fsanz-alerts-accordion-content">';
-        echo '<p>Use a token to insert a value from the selected recall or the full JSON feed into the HTML merge template.</p>';
+        echo '<div class="fsanz-alerts-tabs" role="tablist" aria-label="Page designer">';
+        echo '<button type="button" class="fsanz-alerts-tab" id="fsanz-alerts-tab-template" role="tab" aria-controls="fsanz-alerts-panel-template" aria-selected="true" tabindex="0">Template</button>';
+        echo '<button type="button" class="fsanz-alerts-tab" id="fsanz-alerts-tab-preview" role="tab" aria-controls="fsanz-alerts-panel-preview" aria-selected="false" tabindex="-1">Preview</button></div>';
+        echo '<div id="fsanz-alerts-panel-template" class="fsanz-alerts-tab-panel" role="tabpanel" aria-labelledby="fsanz-alerts-tab-template"><div class="fsanz-alerts-template-grid">';
+        echo '<section class="fsanz-alerts-template-column" aria-labelledby="fsanz-alerts-tokens-heading"><h3 id="fsanz-alerts-tokens-heading">Available tokens</h3>';
         echo '<label for="fsanz-alerts-token-search" class="screen-reader-text">Search available tokens</label>';
         echo '<input id="fsanz-alerts-token-search" class="widefat" type="search" placeholder="Search tokens">';
         echo '<div class="fsanz-alerts-token-list"><table class="widefat striped"><thead><tr><th>Token</th><th>Example value</th></tr></thead><tbody>';
@@ -234,8 +261,8 @@ final class FSANZ_Alerts_Designer {
             $display = strlen($example) > 90 ? wp_html_excerpt($example, 90, '…') : $example;
             echo '<tr><td><button type="button" class="button-link fsanz-alerts-token" data-token="%' . esc_attr($token) . '%" title="Insert token">%' . esc_html($token) . '%</button></td><td>' . esc_html($display) . '</td></tr>';
         }
-        echo '</tbody></table></div></div></details>';
-        echo '<details class="fsanz-alerts-accordion" id="fsanz-alerts-template-section" open><summary>HTML merge template</summary><div class="fsanz-alerts-accordion-content">';
+        echo '</tbody></table></div></section>';
+        echo '<section class="fsanz-alerts-template-column" aria-labelledby="fsanz-alerts-template-heading"><h3 id="fsanz-alerts-template-heading">HTML merge template</h3>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         echo '<input type="hidden" name="action" value="fsanz_alerts_save_template">';
         wp_nonce_field('fsanz_alerts_save_template');
@@ -248,24 +275,25 @@ final class FSANZ_Alerts_Designer {
             echo '<option value="' . esc_attr($token) . '" ' . selected($selected_image_token, $token, false) . '>' . esc_html($label) . '</option>';
         }
         echo '</select>';
+        echo '<p class="description">Sets the imported post’s featured image. It is outside the HTML preview.</p>';
         submit_button('Save HTML merge template', 'primary', 'submit', false);
-        echo '</form></div></details>';
-        echo '<details class="fsanz-alerts-accordion" id="fsanz-alerts-preview-section" open><summary>Live preview</summary><div class="fsanz-alerts-accordion-content">';
-        echo '<label for="fsanz-alerts-record"><strong>Preview record</strong></label>';
-        echo '<select id="fsanz-alerts-record" class="widefat">';
-        foreach ($feed['items'] as $index => $item) {
-            echo '<option value="' . esc_attr((string) $index) . '">' . esc_html($item['title']) . '</option>';
-        }
-        echo '</select>';
+        echo '</form></section></div></div>';
+        echo '<div id="fsanz-alerts-panel-preview" class="fsanz-alerts-tab-panel" role="tabpanel" aria-labelledby="fsanz-alerts-tab-preview" hidden>';
+        $titles = array_map(function ($item) { return $item['title']; }, $feed['items']);
+        echo '<div class="fsanz-alerts-record-nav" id="fsanz-alerts-record-nav" data-titles="' . esc_attr(wp_json_encode($titles)) . '">';
+        echo '<p>Showing this: <strong id="fsanz-alerts-record-title">' . esc_html($titles[0]) . '</strong> <span id="fsanz-alerts-record-position">1 of ' . esc_html((string) count($titles)) . '</span></p>';
+        $first_missing = !FSANZ_Alerts_Importer::existing_post_id($feed['items'][0]['url']);
+        echo '<div class="fsanz-alerts-record-actions"><button type="button" class="button-link" id="fsanz-alerts-previous" disabled>← Previous</button><button type="button" class="button-link" id="fsanz-alerts-next"' . (count($titles) < 2 ? ' disabled' : '') . '>Next →</button>';
+        echo '<button type="button" class="button-link fsanz-alerts-add-now" id="fsanz-alerts-add-now"' . ($first_missing ? '' : ' hidden') . ($saved === '' ? ' disabled title="Save the HTML merge template first"' : '') . '>Add now</button>';
+        echo '<a id="fsanz-alerts-edit-draft" href="#" hidden>Edit draft</a></div></div>';
+        echo '<input type="hidden" id="fsanz-alerts-record" value="0">';
         echo '<p id="fsanz-alerts-preview-status" role="status" aria-live="polite">Previewing the selected recall.</p>';
         $initial = self::render_template($template, $feed, $feed['items'][0]);
-        $initial_image = self::image_url_for_record($feed, $feed['items'][0], $selected_image_token);
-        echo '<iframe id="fsanz-alerts-preview" title="Alert page preview" sandbox="" srcdoc="' . esc_attr(self::preview_document($initial['html'], $initial_image, $feed['items'][0]['title'])) . '"></iframe>';
-        echo '</div></details></div></div>';
+        echo '<iframe id="fsanz-alerts-preview" title="Alert page preview" sandbox="" srcdoc="' . esc_attr(self::preview_document($initial['html'])) . '"></iframe>';
+        echo '</div></div>';
     }
 
-    public static function preview_document($html, $image_url = '', $title = '') {
-        $image = $image_url !== '' ? '<figure><img src="' . esc_url($image_url) . '" alt="' . esc_attr($title) . '"></figure>' : '';
-        return '<!doctype html><html><head><meta charset="utf-8"><style>body{font:1rem/1.55 system-ui,sans-serif;color:#1d2327;padding:1.5rem;margin:0}img{max-width:100%;height:auto}figure{margin:0 0 1.5rem}a{color:#135e96}</style></head><body>' . $image . $html . '</body></html>';
+    public static function preview_document($html) {
+        return '<!doctype html><html><head><meta charset="utf-8"><style>body{font:1rem/1.55 system-ui,sans-serif;color:#1d2327;padding:1.5rem;margin:0}img{max-width:100%;height:auto}a{color:#135e96}</style></head><body>' . $html . '</body></html>';
     }
 }

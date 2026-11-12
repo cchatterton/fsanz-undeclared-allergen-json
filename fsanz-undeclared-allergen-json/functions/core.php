@@ -398,10 +398,16 @@ final class FSANZ_Undeclared_Allergen_JSON {
         }
         $feed = get_option(self::OPTION);
         $error = get_option(self::ERROR_OPTION);
-        echo '<div class="wrap fsanz-alerts-admin"><h1>FSANZ Alerts</h1>';
+        echo '<div class="wrap fsanz-alerts-admin"><h1 class="screen-reader-text">FSANZ Alerts</h1>';
         if ($error) {
             echo '<div class="notice notice-error"><p>' . esc_html($error) . ' The last successful feed remains available.</p></div>';
         }
+        if (isset($_GET['template_saved'])) {
+            echo '<div class="notice notice-success"><p>HTML merge template saved.</p></div>';
+        }
+        echo '<header class="fsanz-alerts-hero"><div class="fsanz-alerts-hero-copy"><p class="fsanz-alerts-eyebrow">FOOD RECALL MONITORING</p><h2>FSANZ Alerts</h2><p>Undeclared allergen recalls, ready for review.</p></div>';
+        echo '<span class="fsanz-alerts-version" aria-label="Version ' . esc_attr(FSANZ_ALLERGEN_VERSION) . '">v' . esc_html(FSANZ_ALLERGEN_VERSION) . '</span>';
+        echo '<div class="fsanz-alerts-capabilities" aria-label="Capabilities"><span>' . (self::automation_enabled() ? 'Hourly refresh' : 'Automation paused') . '</span><span>Draft imports</span><span>Public JSON</span></div></header>';
         FSANZ_Alerts_Designer::render_status($feed);
         FSANZ_Alerts_Designer::render_admin($feed);
         echo '</div>';

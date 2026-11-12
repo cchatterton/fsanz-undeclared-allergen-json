@@ -2,6 +2,15 @@
 
 All notable changes to AlphaSys FSANZ Alerts are recorded here.
 
+## 1.4.0 - 2026-11-12
+
+- Restored the compact Author Branded navy hero, version watermark, and capability chips.
+- Kept the full-width status panel concise and moved save notices above the branded area.
+- Replaced designer accordions with Template and Preview tabs.
+- Placed tokens and HTML editor side by side, and added AJAX Previous and Next preview controls for all cached recalls.
+- Kept the featured image separate from the HTML preview.
+- Added a targeted Add now action for the missing recall currently shown in Preview.
+
 ## 1.3.0 - 2026-11-12
 
 - Create imported Alerts as drafts and add a selectable featured-image token with preview.

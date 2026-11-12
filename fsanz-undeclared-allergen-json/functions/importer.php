@@ -113,7 +113,7 @@ final class FSANZ_Alerts_Importer {
     /**
      * Import up to $limit missing records. Zero imports all missing records.
      */
-    public static function run($limit, $refresh, $trigger) {
+    public static function run($limit, $refresh, $trigger, $target_url = '') {
         $status = array(
             'ran_at' => gmdate('c'),
             'trigger' => $trigger,
@@ -153,6 +153,9 @@ final class FSANZ_Alerts_Importer {
             }
             $image_token = FSANZ_Alerts_Designer::saved_image_token($feed);
             foreach ($feed['items'] as $item) {
+                if ($target_url !== '' && (!isset($item['url']) || $item['url'] !== $target_url)) {
+                    continue;
+                }
                 if (empty($item['url']) || empty($item['title'])) {
                     $status['error'] = 'A feed record is missing its URL or title.';
                     break;
