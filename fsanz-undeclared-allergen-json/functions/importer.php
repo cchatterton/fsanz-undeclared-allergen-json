@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) { exit; }
 final class FSANZ_Alerts_Importer {
     const POST_TYPE = 'alert';
     const TEMPLATE_OPTION = 'fsanz_alerts_html_template';
+    const IMAGE_TOKEN_OPTION = 'fsanz_alerts_featured_image_token';
     const STATUS_OPTION = 'fsanz_alerts_import_status';
     const CRON = 'fsanz_alerts_nightly_import';
     const SOURCE_META = '_fsanz_alert_source_url';
@@ -13,7 +14,7 @@ final class FSANZ_Alerts_Importer {
     public static function init() {
         add_action('init', array(__CLASS__, 'register_post_type'), 0);
         add_action('init', array(__CLASS__, 'ensure_schedule'));
-        add_action(self::CRON, array(__CLASS__, 'nightly_import'));
+        add_action(self::CRON, array(__CLASS__, 'hourly_import'));
         add_action('admin_post_fsanz_alerts_import_next', array(__CLASS__, 'manual_import_next'));
     }
 
@@ -54,26 +55,18 @@ final class FSANZ_Alerts_Importer {
     }
 
     public static function ensure_schedule() {
-        if (!wp_next_scheduled(self::CRON)) {
-            self::schedule_next();
+        if (!FSANZ_Undeclared_Allergen_JSON::automation_enabled()) {
+            wp_clear_scheduled_hook(self::CRON);
+            return;
+        }
+        if (wp_get_schedule(self::CRON) !== 'hourly') {
+            wp_clear_scheduled_hook(self::CRON);
+            wp_schedule_event(time() + 180, 'hourly', self::CRON);
         }
     }
 
-    private static function schedule_next() {
-        $now = new DateTimeImmutable('now', wp_timezone());
-        $next = $now->setTime(2, 0);
-        if ($next->getTimestamp() <= $now->getTimestamp()) {
-            $next = $next->modify('+1 day');
-        }
-        wp_schedule_single_event($next->getTimestamp(), self::CRON);
-    }
-
-    public static function nightly_import() {
-        try {
-            self::run(0, true, 'overnight');
-        } finally {
-            self::ensure_schedule();
-        }
+    public static function hourly_import() {
+        self::run(0, true, 'hourly');
     }
 
     public static function manual_import_next() {
@@ -129,6 +122,7 @@ final class FSANZ_Alerts_Importer {
             'post_id' => 0,
             'title' => '',
             'error' => '',
+            'warnings' => array(),
         );
         $lock_time = (int) get_option(self::LOCK_OPTION, 0);
         if ($lock_time && $lock_time < time() - 3600) {
@@ -146,7 +140,7 @@ final class FSANZ_Alerts_Importer {
             }
             $feed = get_option('fsanz_undeclared_allergen_feed');
             $generated = is_array($feed) && !empty($feed['generated_at']) ? strtotime($feed['generated_at']) : false;
-            if ($refresh && (!$generated || $generated < time() - DAY_IN_SECONDS)) {
+            if ($refresh && (!$generated || $generated < time() - HOUR_IN_SECONDS)) {
                 if (!FSANZ_Undeclared_Allergen_JSON::refresh()) {
                     $status['error'] = 'The FSANZ feed refresh failed. No records were imported.';
                     return $status;
@@ -157,6 +151,7 @@ final class FSANZ_Alerts_Importer {
                 $status['error'] = 'No successful JSON feed is available yet.';
                 return $status;
             }
+            $image_token = FSANZ_Alerts_Designer::saved_image_token($feed);
             foreach ($feed['items'] as $item) {
                 if (empty($item['url']) || empty($item['title'])) {
                     $status['error'] = 'A feed record is missing its URL or title.';
@@ -177,7 +172,7 @@ final class FSANZ_Alerts_Importer {
                 }
                 $post_id = wp_insert_post(array(
                     'post_type' => self::POST_TYPE,
-                    'post_status' => 'publish',
+                    'post_status' => 'draft',
                     'post_title' => $item['title'],
                     'post_content' => "<!-- wp:html -->\n" . $rendered['html'] . "\n<!-- /wp:html -->",
                 ), true);
@@ -188,6 +183,20 @@ final class FSANZ_Alerts_Importer {
                 update_post_meta($post_id, self::SOURCE_META, $item['url']);
                 update_post_meta($post_id, '_fsanz_alert_recall_date', isset($item['date_iso']) ? $item['date_iso'] : '');
                 update_post_meta($post_id, '_fsanz_alert_json', wp_json_encode($item));
+                $image_url = FSANZ_Alerts_Designer::image_url_for_record($feed, $item, $image_token);
+                if ($image_url !== '') {
+                    if (!function_exists('media_sideload_image')) {
+                        require_once ABSPATH . 'wp-admin/includes/file.php';
+                        require_once ABSPATH . 'wp-admin/includes/media.php';
+                        require_once ABSPATH . 'wp-admin/includes/image.php';
+                    }
+                    $attachment_id = media_sideload_image($image_url, $post_id, $item['title'], 'id');
+                    if (is_wp_error($attachment_id)) {
+                        $status['warnings'][] = 'Featured image for ' . $item['title'] . ': ' . $attachment_id->get_error_message();
+                    } elseif (!set_post_thumbnail($post_id, $attachment_id)) {
+                        $status['warnings'][] = 'Could not set the featured image for ' . $item['title'] . '.';
+                    }
+                }
                 $status['imported']++;
                 $status['post_id'] = $post_id;
                 $status['title'] = $item['title'];

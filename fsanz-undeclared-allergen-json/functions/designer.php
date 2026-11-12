@@ -28,7 +28,14 @@ final class FSANZ_Alerts_Designer {
         check_admin_referer('fsanz_alerts_save_template');
         $raw = isset($_POST['template']) ? wp_unslash($_POST['template']) : '';
         $template = is_string($raw) ? $raw : '';
+        $feed = get_option('fsanz_undeclared_allergen_feed');
+        $image_token = isset($_POST['featured_image_token']) ? wp_unslash($_POST['featured_image_token']) : '';
+        $options = self::image_token_options($feed);
+        if (!is_string($image_token) || ($image_token !== '' && !isset($options[$image_token]))) {
+            wp_die('Invalid featured image token.');
+        }
         update_option(FSANZ_Alerts_Importer::TEMPLATE_OPTION, $template, false);
+        update_option(FSANZ_Alerts_Importer::IMAGE_TOKEN_OPTION, $image_token, false);
         wp_safe_redirect(admin_url('options-general.php?page=fsanz-allergen-json&template_saved=1'));
         exit;
     }
@@ -99,6 +106,44 @@ final class FSANZ_Alerts_Designer {
         return $catalog;
     }
 
+    public static function image_token_options($feed) {
+        $options = array();
+        foreach (self::token_catalog($feed) as $token => $value) {
+            if (strpos($token, 'item_') === 0 && self::valid_image_url($value)) {
+                $options[$token] = '%' . $token . '%';
+            }
+        }
+        return $options;
+    }
+
+    public static function saved_image_token($feed) {
+        $saved = get_option(FSANZ_Alerts_Importer::IMAGE_TOKEN_OPTION, null);
+        $options = self::image_token_options($feed);
+        if ($saved === null) {
+            return isset($options['item_details_full_image_url']) ? 'item_details_full_image_url' : (isset($options['item_image_url']) ? 'item_image_url' : '');
+        }
+        return is_string($saved) && isset($options[$saved]) ? $saved : '';
+    }
+
+    public static function image_url_for_record($feed, $item, $token) {
+        if ($token === '' || !isset(self::image_token_options($feed)[$token])) {
+            return '';
+        }
+        $values = self::tokens_for_record($feed, $item);
+        $url = isset($values[$token]) ? $values[$token] : '';
+        return self::valid_image_url($url) ? $url : '';
+    }
+
+    private static function valid_image_url($url) {
+        if (!is_string($url)) { return false; }
+        $parts = wp_parse_url($url);
+        return is_array($parts)
+            && isset($parts['scheme'], $parts['host'], $parts['path'])
+            && strtolower($parts['scheme']) === 'https'
+            && strtolower($parts['host']) === 'www.foodstandards.gov.au'
+            && (bool) preg_match('/\.(?:jpe?g|png|gif|webp|avif)$/i', $parts['path']);
+    }
+
     public static function render_template($template, $feed, $item) {
         $template = (string) $template;
         $values = self::tokens_for_record($feed, $item);
@@ -127,43 +172,51 @@ final class FSANZ_Alerts_Designer {
         }
         $template = isset($_POST['template']) ? wp_unslash($_POST['template']) : '';
         $rendered = self::render_template($template, $feed, $feed['items'][$index]);
-        $rendered['document'] = self::preview_document($rendered['html']);
+        $image_token = isset($_POST['featured_image_token']) ? wp_unslash($_POST['featured_image_token']) : '';
+        $image_url = is_string($image_token) ? self::image_url_for_record($feed, $feed['items'][$index], $image_token) : '';
+        $rendered['document'] = self::preview_document($rendered['html'], $image_url, $feed['items'][$index]['title']);
         wp_send_json_success($rendered);
     }
 
-    public static function render_admin($feed) {
+    public static function render_status($feed) {
         $saved = FSANZ_Alerts_Importer::saved_template();
-        $template = $saved !== '' ? $saved : self::example_template();
         $status = get_option(FSANZ_Alerts_Importer::STATUS_OPTION);
-        $next = wp_next_scheduled(FSANZ_Alerts_Importer::CRON);
         $missing = is_array($feed) ? FSANZ_Alerts_Importer::missing_count($feed) : 0;
-        echo '<div class="fsanz-alerts-panel"><h2>Alert imports</h2>';
-        echo '<p>New records become published Alert posts. A recall is identified by its FSANZ detail URL, including posts in Trash.</p>';
-        if ($next) {
-            echo '<p>Next overnight import: ' . esc_html(wp_date('j F Y, g:i a T', $next)) . ' (site time).</p>';
-        }
+        echo '<div class="fsanz-alerts-panel fsanz-alerts-status"><h2>Recall feed</h2>';
         if (is_array($feed)) {
-            echo '<p>Missing records in the current feed: ' . esc_html((string) $missing) . '.</p>';
+            echo '<p>' . esc_html((string) $feed['count']) . ' recalls · ' . esc_html((string) $missing) . ' missing · Updated ' . esc_html(wp_date('j M Y, g:i a', strtotime($feed['generated_at']))) . '</p>';
+        } else {
+            echo '<p>No feed yet.</p>';
         }
-        if (is_array($status)) {
-            $summary = $status['error'] !== '' ? $status['error'] : 'Imported ' . $status['imported'] . ' record(s); skipped ' . $status['skipped'] . ' existing record(s).';
-            echo '<p role="status">Last ' . esc_html($status['trigger']) . ' import: ' . esc_html($summary) . '</p>';
-            if (!empty($status['post_id'])) {
-                echo '<p><a href="' . esc_url(get_edit_post_link($status['post_id'])) . '">Edit last imported Alert</a></p>';
-            }
+        if (is_array($status) && !empty($status['error'])) {
+            echo '<p role="alert">Import: ' . esc_html($status['error']) . '</p>';
         }
-        if ($saved === '') {
-            echo '<p class="description">Save the HTML merge template before importing. Overnight imports remain inactive until then.</p>';
+        if (is_array($status) && !empty($status['warnings'])) {
+            echo '<p role="status">' . esc_html(implode(' ', $status['warnings'])) . '</p>';
         }
+        echo '<div class="fsanz-alerts-actions">';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="fsanz_undeclared_allergen_refresh">';
+        wp_nonce_field('fsanz_undeclared_allergen_refresh');
+        submit_button('Refresh now', 'secondary', 'submit', false);
+        echo '</form>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         echo '<input type="hidden" name="action" value="fsanz_alerts_import_next">';
         wp_nonce_field('fsanz_alerts_import_next');
         $button_attributes = $saved === '' || $missing === 0 ? array('disabled' => 'disabled') : array();
         submit_button('Import next missing record', 'secondary', 'submit', false, $button_attributes);
         echo '</form></div>';
+        echo '<form id="fsanz-alerts-automation" method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="fsanz_alerts_toggle_automation">';
+        wp_nonce_field('fsanz_alerts_toggle_automation');
+        echo '<label><input type="checkbox" name="enabled" value="1" ' . checked(FSANZ_Undeclared_Allergen_JSON::automation_enabled(), true, false) . '> Automatic hourly refresh and draft import</label>';
+        echo '<noscript><button type="submit" class="button">Save automation</button></noscript></form></div>';
+    }
+
+    public static function render_admin($feed) {
+        $saved = FSANZ_Alerts_Importer::saved_template();
+        $template = $saved !== '' ? $saved : self::example_template();
 
         echo '<div class="fsanz-alerts-panel fsanz-alerts-designer"><h2>Page designer</h2>';
-        echo '<p>Write an HTML merge template using the tokens below. Preview it with any recall, then save it for manual and overnight imports. Each imported post uses a WordPress Custom HTML block.</p>';
+        echo '<p>Design draft Alert content with tokens, then preview and save it.</p>';
         if (isset($_GET['template_saved'])) {
             echo '<div class="notice notice-success inline"><p>HTML merge template saved.</p></div>';
         }
@@ -188,6 +241,13 @@ final class FSANZ_Alerts_Designer {
         wp_nonce_field('fsanz_alerts_save_template');
         echo '<label for="fsanz-alerts-template" class="screen-reader-text">HTML merge template code</label>';
         echo '<textarea id="fsanz-alerts-template" name="template" class="large-text code" rows="16">' . esc_textarea($template) . '</textarea>';
+        echo '<label for="fsanz-alerts-featured-image"><strong>Featured image token</strong></label>';
+        echo '<select id="fsanz-alerts-featured-image" name="featured_image_token" class="widefat"><option value="">No featured image</option>';
+        $selected_image_token = self::saved_image_token($feed);
+        foreach (self::image_token_options($feed) as $token => $label) {
+            echo '<option value="' . esc_attr($token) . '" ' . selected($selected_image_token, $token, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select>';
         submit_button('Save HTML merge template', 'primary', 'submit', false);
         echo '</form></div></details>';
         echo '<details class="fsanz-alerts-accordion" id="fsanz-alerts-preview-section" open><summary>Live preview</summary><div class="fsanz-alerts-accordion-content">';
@@ -199,11 +259,13 @@ final class FSANZ_Alerts_Designer {
         echo '</select>';
         echo '<p id="fsanz-alerts-preview-status" role="status" aria-live="polite">Previewing the selected recall.</p>';
         $initial = self::render_template($template, $feed, $feed['items'][0]);
-        echo '<iframe id="fsanz-alerts-preview" title="Alert page preview" sandbox="" srcdoc="' . esc_attr(self::preview_document($initial['html'])) . '"></iframe>';
+        $initial_image = self::image_url_for_record($feed, $feed['items'][0], $selected_image_token);
+        echo '<iframe id="fsanz-alerts-preview" title="Alert page preview" sandbox="" srcdoc="' . esc_attr(self::preview_document($initial['html'], $initial_image, $feed['items'][0]['title'])) . '"></iframe>';
         echo '</div></details></div></div>';
     }
 
-    public static function preview_document($html) {
-        return '<!doctype html><html><head><meta charset="utf-8"><style>body{font:1rem/1.55 system-ui,sans-serif;color:#1d2327;padding:1.5rem;max-width:47.5rem;margin:auto}img{max-width:100%;height:auto}a{color:#135e96}</style></head><body>' . $html . '</body></html>';
+    public static function preview_document($html, $image_url = '', $title = '') {
+        $image = $image_url !== '' ? '<figure><img src="' . esc_url($image_url) . '" alt="' . esc_attr($title) . '"></figure>' : '';
+        return '<!doctype html><html><head><meta charset="utf-8"><style>body{font:1rem/1.55 system-ui,sans-serif;color:#1d2327;padding:1.5rem;margin:0}img{max-width:100%;height:auto}figure{margin:0 0 1.5rem}a{color:#135e96}</style></head><body>' . $image . $html . '</body></html>';
     }
 }

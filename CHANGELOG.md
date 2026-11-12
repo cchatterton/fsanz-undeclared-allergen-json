@@ -2,6 +2,12 @@
 
 All notable changes to AlphaSys FSANZ Alerts are recorded here.
 
+## 1.3.0 - 2026-11-12
+
+- Create imported Alerts as drafts and add a selectable featured-image token with preview.
+- Refresh the feed and import missing drafts hourly, with an on/off switch.
+- Combine feed and import status into one concise full-width block with two action buttons.
+
 ## 1.2.1 - 2026-11-12
 
 - Stacked Available tokens, HTML merge template, and Live preview as independent full-width accordions.

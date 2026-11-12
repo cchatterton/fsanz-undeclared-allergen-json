@@ -6,6 +6,13 @@
     var frame = document.getElementById('fsanz-alerts-preview');
     var status = document.getElementById('fsanz-alerts-preview-status');
     var search = document.getElementById('fsanz-alerts-token-search');
+    var featuredImage = document.getElementById('fsanz-alerts-featured-image');
+    var automation = document.getElementById('fsanz-alerts-automation');
+    if (automation) {
+        automation.querySelector('input[type="checkbox"]').addEventListener('change', function () {
+            automation.submit();
+        });
+    }
     if (!template || !record || !frame || !status) {
         return;
     }
@@ -24,6 +31,7 @@
         data.append('nonce', FSANZAlertsDesigner.nonce);
         data.append('record', record.value);
         data.append('template', template.value);
+        data.append('featured_image_token', featuredImage ? featuredImage.value : '');
 
         fetch(FSANZAlertsDesigner.ajaxUrl, {
             method: 'POST',
@@ -54,6 +62,9 @@
 
     template.addEventListener('input', queuePreview);
     record.addEventListener('change', updatePreview);
+    if (featuredImage) {
+        featuredImage.addEventListener('change', updatePreview);
+    }
 
     document.querySelectorAll('.fsanz-alerts-token').forEach(function (button) {
         button.addEventListener('click', function () {

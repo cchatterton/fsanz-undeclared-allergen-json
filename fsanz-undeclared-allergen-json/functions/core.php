@@ -7,6 +7,7 @@ final class FSANZ_Undeclared_Allergen_JSON {
     private const ERROR_OPTION = 'fsanz_undeclared_allergen_error';
     private const CRON = 'fsanz_undeclared_allergen_refresh';
     private const MAX_PAGES = 100;
+    public const AUTOMATION_OPTION = 'fsanz_alerts_hourly_enabled';
 
     public static function init() {
         add_action(self::CRON, array(__CLASS__, 'refresh'));
@@ -14,14 +15,12 @@ final class FSANZ_Undeclared_Allergen_JSON {
         add_action('admin_menu', array(__CLASS__, 'admin_menu'));
         add_action('admin_enqueue_scripts', array(__CLASS__, 'admin_assets'));
         add_action('admin_post_fsanz_undeclared_allergen_refresh', array(__CLASS__, 'manual_refresh'));
+        add_action('admin_post_fsanz_alerts_toggle_automation', array(__CLASS__, 'toggle_automation'));
         add_action('init', array(__CLASS__, 'ensure_schedule'));
     }
 
     public static function activate() {
         self::ensure_schedule();
-        if (!get_option(self::OPTION)) {
-            wp_schedule_single_event(time() + 10, self::CRON);
-        }
     }
 
     public static function deactivate() {
@@ -29,9 +28,30 @@ final class FSANZ_Undeclared_Allergen_JSON {
     }
 
     public static function ensure_schedule() {
-        if (!wp_next_scheduled(self::CRON)) {
-            wp_schedule_event(time() + 60, 'daily', self::CRON);
+        if (!self::automation_enabled()) {
+            wp_clear_scheduled_hook(self::CRON);
+            return;
         }
+        if (wp_get_schedule(self::CRON) !== 'hourly') {
+            wp_clear_scheduled_hook(self::CRON);
+            wp_schedule_event(time() + 60, 'hourly', self::CRON);
+        }
+    }
+
+    public static function automation_enabled() {
+        return get_option(self::AUTOMATION_OPTION, '1') !== '0';
+    }
+
+    public static function toggle_automation() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Not allowed.');
+        }
+        check_admin_referer('fsanz_alerts_toggle_automation');
+        update_option(self::AUTOMATION_OPTION, isset($_POST['enabled']) && $_POST['enabled'] === '1' ? '1' : '0', false);
+        self::ensure_schedule();
+        FSANZ_Alerts_Importer::ensure_schedule();
+        wp_safe_redirect(admin_url('options-general.php?page=fsanz-allergen-json'));
+        exit;
     }
 
     public static function register_route() {
@@ -382,20 +402,7 @@ final class FSANZ_Undeclared_Allergen_JSON {
         if ($error) {
             echo '<div class="notice notice-error"><p>' . esc_html($error) . ' The last successful feed remains available.</p></div>';
         }
-        echo '<div class="fsanz-alerts-hero"><div><p class="fsanz-alerts-eyebrow">FOOD RECALL MONITORING</p><h2>Undeclared allergen feed</h2><p>Daily recall data from Food Standards Australia New Zealand, available as public JSON.</p></div><span class="fsanz-alerts-version" aria-label="Version ' . esc_attr(FSANZ_ALLERGEN_VERSION) . '">v' . esc_html(FSANZ_ALLERGEN_VERSION) . '</span></div>';
-        echo '<div class="fsanz-alerts-panel"><h2>Feed status</h2>';
-        if (is_array($feed)) {
-            echo '<p>Last successful refresh: ' . esc_html($feed['generated_at']) . ' UTC. Items: ' . esc_html((string) $feed['count']) . '.</p>';
-        } else {
-            echo '<p>No successful refresh yet.</p>';
-        }
-        echo '<p>JSON endpoint: <a href="' . esc_url(rest_url('fsanz-allergens/v1/recalls')) . '">' . esc_html(rest_url('fsanz-allergens/v1/recalls')) . '</a></p>';
-        echo '<p>Refreshes run daily through WP-Cron. WP-Cron needs site traffic or a server cron trigger.</p>';
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-        echo '<input type="hidden" name="action" value="fsanz_undeclared_allergen_refresh">';
-        wp_nonce_field('fsanz_undeclared_allergen_refresh');
-        submit_button('Refresh now');
-        echo '</form></div>';
+        FSANZ_Alerts_Designer::render_status($feed);
         FSANZ_Alerts_Designer::render_admin($feed);
         echo '</div>';
     }

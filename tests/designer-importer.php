@@ -1,10 +1,12 @@
 <?php
 define('ABSPATH', __DIR__);
 define('DAY_IN_SECONDS', 86400);
+define('HOUR_IN_SECONDS', 3600);
 $GLOBALS['options'] = array();
 $GLOBALS['posts'] = array();
 $GLOBALS['meta'] = array();
 $GLOBALS['events'] = array();
+$GLOBALS['thumbnails'] = array();
 
 class WP_Error {
     private $message;
@@ -13,6 +15,8 @@ class WP_Error {
 }
 class FSANZ_Undeclared_Allergen_JSON {
     public static $refreshes = 0;
+    public const AUTOMATION_OPTION = 'fsanz_alerts_hourly_enabled';
+    public static function automation_enabled() { return get_option(self::AUTOMATION_OPTION, '1') !== '0'; }
     public static function refresh() {
         self::$refreshes++;
         $feed = get_option('fsanz_undeclared_allergen_feed');
@@ -44,6 +48,12 @@ function update_post_meta($id, $key, $value) { $GLOBALS['meta'][$id][$key] = $va
 function wp_timezone() { return new DateTimeZone('Australia/Sydney'); }
 function wp_next_scheduled($hook) { return $GLOBALS['events'][$hook] ?? false; }
 function wp_schedule_single_event($timestamp, $hook) { $GLOBALS['events'][$hook] = $timestamp; }
+function wp_schedule_event($timestamp, $recurrence, $hook) { $GLOBALS['events'][$hook] = array($timestamp, $recurrence); }
+function wp_get_schedule($hook) { return isset($GLOBALS['events'][$hook]) && is_array($GLOBALS['events'][$hook]) ? $GLOBALS['events'][$hook][1] : false; }
+function wp_clear_scheduled_hook($hook) { unset($GLOBALS['events'][$hook]); }
+function wp_parse_url($url) { return parse_url($url); }
+function media_sideload_image($url, $post_id, $title, $return) { return 100 + $post_id; }
+function set_post_thumbnail($post_id, $attachment_id) { $GLOBALS['thumbnails'][$post_id] = $attachment_id; return true; }
 
 require dirname(__DIR__) . '/fsanz-undeclared-allergen-json/functions/importer.php';
 require dirname(__DIR__) . '/fsanz-undeclared-allergen-json/functions/designer.php';
@@ -58,6 +68,7 @@ $one = array(
     'title' => 'Cake & milk',
     'url' => 'https://www.foodstandards.gov.au/food-recalls/recall-alert/one',
     'problem' => 'Undeclared egg & soy',
+    'image_url' => 'https://www.foodstandards.gov.au/sites/default/files/cake.png?itok=test',
     'locations' => array('NSW', 'VIC'),
     'details' => array('recall_information' => array('problem' => 'Undeclared egg & soy', 'what_to_do' => 'Do not consume')),
 );
@@ -65,6 +76,7 @@ $two = array(
     'title' => 'Noodles',
     'url' => 'https://www.foodstandards.gov.au/food-recalls/recall-alert/two',
     'problem' => 'Undeclared milk',
+    'image_url' => 'https://www.foodstandards.gov.au/sites/default/files/noodles.png',
     'locations' => array('QLD'),
     'details' => array('recall_information' => array('problem' => 'Undeclared milk', 'what_to_do' => 'Return the product')),
 );
@@ -88,8 +100,11 @@ if (strpos($rendered['html'], 'Cake &amp; milk') === false || strpos($rendered['
 same(FSANZ_Alerts_Designer::render_template('%item_missing%', $feed, $one)['unknown'], array('%item_missing%'), 'Unknown token');
 
 update_option(FSANZ_Alerts_Importer::TEMPLATE_OPTION, $template);
+update_option(FSANZ_Alerts_Importer::IMAGE_TOKEN_OPTION, 'item_image_url');
 $first = FSANZ_Alerts_Importer::run(1, false, 'manual');
 same($first['imported'], 1, 'First manual import');
+same($GLOBALS['posts'][1]['post_status'], 'draft', 'Imported post is draft');
+same($GLOBALS['thumbnails'][1], 101, 'Selected image becomes featured');
 same($GLOBALS['meta'][1][FSANZ_Alerts_Importer::SOURCE_META], $one['url'], 'Source URL identity');
 if (strpos($GLOBALS['posts'][1]['post_content'], '<!-- wp:html -->') !== 0) {
     throw new RuntimeException('Imported content is not a Custom HTML block');
@@ -122,6 +137,8 @@ $stale = FSANZ_Alerts_Importer::run(0, true, 'overnight');
 same($stale['imported'], 0, 'Stale feed import still avoids duplicates');
 same(FSANZ_Undeclared_Allergen_JSON::$refreshes, 1, 'Stale feed refreshed overnight');
 FSANZ_Alerts_Importer::ensure_schedule();
-$hour = (int) (new DateTimeImmutable('@' . $GLOBALS['events'][FSANZ_Alerts_Importer::CRON]))->setTimezone(wp_timezone())->format('G');
-same($hour, 2, 'Site-local overnight schedule');
+same(wp_get_schedule(FSANZ_Alerts_Importer::CRON), 'hourly', 'Hourly import schedule');
+update_option(FSANZ_Undeclared_Allergen_JSON::AUTOMATION_OPTION, '0');
+FSANZ_Alerts_Importer::ensure_schedule();
+same(wp_next_scheduled(FSANZ_Alerts_Importer::CRON), false, 'Automation toggle clears schedule');
 echo "Designer and importer tests passed\n";
