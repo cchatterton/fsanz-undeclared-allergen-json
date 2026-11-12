@@ -364,6 +364,11 @@ final class FSANZ_Undeclared_Allergen_JSON {
     public static function admin_assets($hook) {
         if ($hook === 'settings_page_fsanz-allergen-json') {
             wp_enqueue_style('fsanz-allergen-admin', plugin_dir_url(FSANZ_ALLERGEN_PLUGIN_FILE) . 'styles/admin.css', array(), FSANZ_ALLERGEN_VERSION);
+            wp_enqueue_script('fsanz-allergen-designer', plugin_dir_url(FSANZ_ALLERGEN_PLUGIN_FILE) . 'scripts/admin.js', array(), FSANZ_ALLERGEN_VERSION, true);
+            wp_localize_script('fsanz-allergen-designer', 'FSANZAlertsDesigner', array(
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('fsanz_alerts_preview'),
+            ));
         }
     }
 
@@ -390,7 +395,9 @@ final class FSANZ_Undeclared_Allergen_JSON {
         echo '<input type="hidden" name="action" value="fsanz_undeclared_allergen_refresh">';
         wp_nonce_field('fsanz_undeclared_allergen_refresh');
         submit_button('Refresh now');
-        echo '</form></div></div>';
+        echo '</form></div>';
+        FSANZ_Alerts_Designer::render_admin($feed);
+        echo '</div>';
     }
 
     public static function manual_refresh() {

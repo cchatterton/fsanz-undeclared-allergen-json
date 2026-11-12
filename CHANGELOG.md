@@ -2,6 +2,13 @@
 
 All notable changes to AlphaSys FSANZ Alerts are recorded here.
 
+## 1.2.0 - 2026-11-12
+
+- Added token discovery for the complete cached JSON, an HTML merge template editor, and a live per-record preview.
+- Registered the `alert` post type and added manual import of the next missing recall.
+- Added overnight import of all missing recalls at about 2 a.m. in the site timezone, refreshing stale feed data first.
+- Deduplicated by FSANZ detail URL across published, unpublished, and trashed Alerts; existing posts are not overwritten.
+
 ## 1.1.3 - 2026-11-12
 
 - Added the verified AlphaSys WordPress.org contributor username to the readme metadata.

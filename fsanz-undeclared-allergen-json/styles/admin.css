@@ -39,7 +39,8 @@
     border: 0.0625rem solid #d5dfe5;
     border-radius: 0.75rem;
     box-shadow: 0 0.2rem 0.8rem rgba(0, 40, 64, 0.07);
-    max-width: 56rem;
+    max-width: 82rem;
+    margin: 1rem 0;
     padding: 1.5rem;
 }
 
@@ -47,8 +48,68 @@
     margin-top: 0;
 }
 
+.fsanz-alerts-admin .fsanz-alerts-designer-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(18rem, 0.9fr) minmax(24rem, 1.1fr);
+}
+
+.fsanz-alerts-admin .fsanz-alerts-designer-grid label {
+    display: block;
+    margin: 1rem 0 0.5rem;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-token-list {
+    border: 0.0625rem solid #d5dfe5;
+    max-height: 28rem;
+    overflow: auto;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-token-list table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-token-list th:first-child,
+.fsanz-alerts-admin .fsanz-alerts-token-list td:first-child {
+    width: 55%;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-token-list td {
+    overflow-wrap: anywhere;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-token {
+    display: block;
+    text-align: left;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.fsanz-alerts-admin #fsanz-alerts-template {
+    min-height: 18rem;
+}
+
+.fsanz-alerts-admin #fsanz-alerts-preview {
+    background: #fff;
+    border: 0.0625rem solid #d5dfe5;
+    min-height: 28rem;
+    width: 100%;
+}
+
+.fsanz-alerts-admin .fsanz-alerts-token:focus-visible {
+    outline: 0.125rem solid #ff6b00;
+    outline-offset: 0.125rem;
+}
+
 @media (max-width: 40rem) {
     .fsanz-alerts-admin .fsanz-alerts-hero {
         flex-direction: column;
+    }
+}
+
+@media (max-width: 60rem) {
+    .fsanz-alerts-admin .fsanz-alerts-designer-grid {
+        grid-template-columns: 1fr;
     }
 }
